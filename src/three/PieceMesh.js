@@ -396,20 +396,17 @@ function createGLBPiece(type, color, square, scene) {
   // Normalize scale — GLB models vary in size; target bounding box height ~1.0
   const box = new THREE.Box3().setFromObject(group)
   const height = box.max.y - box.min.y
-  if (height > 0) {
-    const scale = 1.0 / height
-    group.scale.setScalar(scale)
-  }
+  const normalizedScale = height > 0 ? 1.0 / height : 1
+  group.scale.setScalar(normalizedScale)
 
-  // Align base to y=0
+  // Align base to y=0 and store offset so movePiece can restore it
   const box2 = new THREE.Box3().setFromObject(group)
-  group.position.y = -box2.min.y
+  const baseY = -box2.min.y
 
   const pos = squareToWorld(square)
-  group.position.x = pos.x
-  group.position.z = pos.z
+  group.position.set(pos.x, baseY, pos.z)
 
-  group.userData = { pieceType: type.toLowerCase(), color, square }
+  group.userData = { pieceType: type.toLowerCase(), color, square, normalizedScale, baseY }
   group.name = `piece_${type}_${color}_${square}`
 
   scene.add(group)
@@ -471,8 +468,9 @@ export function rebuildPieces(scene, pieceMap, style) {
 export function movePiece(piece, toSquare, duration = 0.4) {
   const target = squareToWorld(toSquare)
   const current = piece.position.clone()
+  // GLB pieces store their base y offset; other styles land at target.y (0)
+  const landY = target.y + (piece.userData.baseY || 0)
 
-  // Arc height based on distance
   const dist = current.distanceTo(target)
   const arcHeight = Math.max(0.8, dist * 0.3)
 
@@ -487,7 +485,7 @@ export function movePiece(piece, toSquare, duration = 0.4) {
       })
       .to(piece.position, {
         x: target.x,
-        y: target.y,
+        y: landY,
         z: target.z,
         duration: duration * 0.5,
         ease: 'power2.in'
@@ -526,8 +524,9 @@ export function removePiece(piece, scene) {
  * Highlight a selected piece with a subtle scale/glow pulse.
  */
 export function selectPiece(piece) {
+  const s = piece.userData.normalizedScale || 1
   gsap.to(piece.scale, {
-    x: 1.12, y: 1.12, z: 1.12,
+    x: s * 1.12, y: s * 1.12, z: s * 1.12,
     duration: 0.2,
     ease: 'back.out(2)'
   })
@@ -537,8 +536,9 @@ export function selectPiece(piece) {
  * Deselect a piece (reset scale).
  */
 export function deselectPiece(piece) {
+  const s = piece.userData.normalizedScale || 1
   gsap.to(piece.scale, {
-    x: 1, y: 1, z: 1,
+    x: s, y: s, z: s,
     duration: 0.2,
     ease: 'power2.out'
   })
