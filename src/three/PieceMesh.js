@@ -20,20 +20,32 @@ const GLB_MAP = {
   k: '/models/king.glb'
 }
 
+const RETRO_GLB_MAP = {
+  p: '/models/retro_pawn.glb',
+  r: '/models/retro_rook.glb',
+  n: '/models/retro_knight.glb',
+  b: '/models/retro_bishop.glb',
+  q: '/models/retro_queen.glb',
+  k: '/models/retro_king.glb'
+}
+
+const RETRO_MODEL_CACHE = {}
+
 export function preloadModels() {
-  const promises = Object.entries(GLB_MAP).map(([type, url]) =>
-    new Promise((resolve, reject) => {
-      loader.load(url, (gltf) => {
-        MODEL_CACHE[type] = gltf.scene
-        resolve()
-      }, undefined, reject)
-    })
-  )
-  return Promise.all(promises)
+  const loadSet = (map, cache) =>
+    Object.entries(map).map(([type, url]) =>
+      new Promise((resolve, reject) => {
+        loader.load(url, (gltf) => { cache[type] = gltf.scene; resolve() }, undefined, reject)
+      })
+    )
+  return Promise.all([...loadSet(GLB_MAP, MODEL_CACHE), ...loadSet(RETRO_GLB_MAP, RETRO_MODEL_CACHE)])
 }
 
 const GLB_WHITE_MAT = () => new THREE.MeshStandardMaterial({ color: '#C8A850', roughness: 0.25, metalness: 0.75 })
 const GLB_BLACK_MAT = () => new THREE.MeshStandardMaterial({ color: '#0A0A0F', roughness: 0.20, metalness: 0.85 })
+
+const RETRO_WHITE_MAT = () => new THREE.MeshStandardMaterial({ color: '#B03030', roughness: 0.30, metalness: 0.60 })
+const RETRO_BLACK_MAT = () => new THREE.MeshStandardMaterial({ color: '#1A3A7A', roughness: 0.30, metalness: 0.60 })
 
 // ─── Classic piece materials ───────────────────────────────────────────────────
 const WHITE_MAT = () => new THREE.MeshStandardMaterial({
@@ -413,6 +425,41 @@ function createGLBPiece(type, color, square, scene) {
   return group
 }
 
+// ─── Retro GLB piece builder ──────────────────────────────────────────────────
+
+function createRetroPiece(type, color, square, scene) {
+  const template = RETRO_MODEL_CACHE[type.toLowerCase()]
+  if (!template) return createClassicPiece(type, color, square, scene)
+
+  const group = template.clone(true)
+  const mat = color === 'white' ? RETRO_WHITE_MAT() : RETRO_BLACK_MAT()
+
+  group.traverse(child => {
+    if (child.isMesh) {
+      child.material = mat
+      child.castShadow = true
+      child.receiveShadow = true
+    }
+  })
+
+  const box = new THREE.Box3().setFromObject(group)
+  const height = box.max.y - box.min.y
+  const normalizedScale = height > 0 ? 1.0 / height : 1
+  group.scale.setScalar(normalizedScale)
+
+  const box2 = new THREE.Box3().setFromObject(group)
+  const baseY = -box2.min.y
+
+  const pos = squareToWorld(square)
+  group.position.set(pos.x, baseY, pos.z)
+
+  group.userData = { pieceType: type.toLowerCase(), color, square, normalizedScale, baseY }
+  group.name = `piece_${type}_${color}_${square}`
+
+  scene.add(group)
+  return group
+}
+
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 /**
@@ -426,6 +473,7 @@ function createGLBPiece(type, color, square, scene) {
 export function createPiece(type, color, square, scene, style = 'classic') {
   switch (style) {
     case 'glb':     return createGLBPiece(type, color, square, scene)
+    case 'retro':   return createRetroPiece(type, color, square, scene)
     case 'symbol':  return createSymbolPiece(type, color, square, scene)
     case 'lowpoly': return createLowPolyPiece(type, color, square, scene)
     default:        return createClassicPiece(type, color, square, scene)

@@ -559,6 +559,7 @@ export default function GameScreen({ setGameResult, playerInfo, settings, setSet
       <div className="flex gap-2 mb-3">
         {[
           { id: 'glb',     label: 'GLB',      desc: '3D model' },
+          { id: 'retro',   label: 'Retro',    desc: '3D retro' },
           { id: 'classic', label: 'Classic',  desc: '3D shapes' },
           { id: 'symbol',  label: 'Symbol',   desc: '♛ disc' },
           { id: 'lowpoly', label: 'Low-poly', desc: 'Geometric' },
