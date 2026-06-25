@@ -371,63 +371,6 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
     setTimeout(() => navigate('/'), 3000)
   }
 
-  // ── Settings mini panel ───────────────────────────────────────────────────
-  const SettingsPanel = () => (
-    <div
-      className="absolute top-full right-0 mt-1 p-4 rounded-xl z-50"
-      style={{ background: '#14141F', border: '1px solid #2A2A3C', width: 260 }}
-    >
-      <p className="text-ash font-inter text-xs tracking-widest uppercase mb-3">Customize</p>
-
-      <p className="text-ivory font-inter text-xs mb-2">Piece Style</p>
-      <div className="flex gap-2 mb-3">
-        {[
-          { id: 'glb',     label: 'GLB',      desc: '3D model' },
-          { id: 'retro',   label: 'Retro',    desc: '3D retro' },
-          { id: 'classic', label: 'Classic',  desc: '3D shapes' },
-          { id: 'symbol',  label: 'Symbol',   desc: '♛ disc' },
-          { id: 'lowpoly', label: 'Low-poly', desc: 'Geometric' },
-        ].map(s => (
-          <button
-            key={s.id}
-            onClick={() => setSettings(prev => ({ ...prev, pieceStyle: s.id }))}
-            className={`flex-1 py-2 px-1 rounded text-xs font-inter border transition-all text-center
-              ${settings.pieceStyle === s.id
-                ? 'border-gold text-gold bg-charcoal'
-                : 'border-carbon text-ash hover:border-ash hover:text-ivory'}`}
-          >
-            <div>{s.label}</div>
-            <div className="text-xs opacity-60 mt-0.5">{s.desc}</div>
-          </button>
-        ))}
-      </div>
-
-      <p className="text-ivory font-inter text-xs mb-2">Board Style</p>
-      <div className="flex gap-2">
-        {[
-          { id: 'wood',   label: 'Wood',   color: '#6B4226' },
-          { id: 'marble', label: 'Marble', color: '#5A5A6A' },
-          { id: 'neon',   label: 'Neon',   color: '#1A4A6A' },
-        ].map(b => (
-          <button
-            key={b.id}
-            onClick={() => setSettings(prev => ({ ...prev, boardStyle: b.id }))}
-            className={`flex-1 py-2 rounded text-xs font-inter border transition-all text-center
-              ${settings.boardStyle === b.id
-                ? 'border-gold text-gold bg-charcoal'
-                : 'border-carbon text-ash hover:border-ash hover:text-ivory'}`}
-          >
-            <div
-              className="w-4 h-4 rounded mx-auto mb-1"
-              style={{ background: b.color }}
-            />
-            {b.label}
-          </button>
-        ))}
-      </div>
-    </div>
-  )
-
   return (
     <div className="w-full h-full flex flex-col bg-obsidian overflow-hidden">
       {/* Top bar */}
@@ -450,7 +393,7 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
             {settingsOpen && (
               <div
                 className="fixed inset-0 z-40"
-                onClick={() => setSettingsOpen(false)}
+                onPointerDown={() => setSettingsOpen(false)}
               />
             )}
             <button
@@ -460,7 +403,61 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
             >
               ⚙
             </button>
-            {settingsOpen && <SettingsPanel />}
+            {settingsOpen && (
+              <div
+                className="absolute top-full right-0 mt-1 p-4 rounded-xl z-50"
+                style={{ background: '#14141F', border: '1px solid #2A2A3C', width: 260 }}
+              >
+                <p className="text-ash font-inter text-xs tracking-widest uppercase mb-3">Customize</p>
+
+                <p className="text-ivory font-inter text-xs mb-2">Piece Style</p>
+                <div className="flex gap-2 mb-3">
+                  {[
+                    { id: 'glb',     label: 'GLB',      desc: '3D model' },
+                    { id: 'retro',   label: 'Retro',    desc: '3D retro' },
+                    { id: 'classic', label: 'Classic',  desc: '3D shapes' },
+                    { id: 'symbol',  label: 'Symbol',   desc: '♛ disc' },
+                    { id: 'lowpoly', label: 'Low-poly', desc: 'Geometric' },
+                  ].map(s => (
+                    <button
+                      key={s.id}
+                      onClick={() => setSettings(prev => ({ ...prev, pieceStyle: s.id }))}
+                      className={`flex-1 py-2 px-1 rounded text-xs font-inter border transition-all text-center
+                        ${settings.pieceStyle === s.id
+                          ? 'border-gold text-gold bg-charcoal'
+                          : 'border-carbon text-ash hover:border-ash hover:text-ivory'}`}
+                    >
+                      <div>{s.label}</div>
+                      <div className="text-xs opacity-60 mt-0.5">{s.desc}</div>
+                    </button>
+                  ))}
+                </div>
+
+                <p className="text-ivory font-inter text-xs mb-2">Board Style</p>
+                <div className="flex gap-2">
+                  {[
+                    { id: 'wood',   label: 'Wood',   color: '#6B4226' },
+                    { id: 'marble', label: 'Marble', color: '#5A5A6A' },
+                    { id: 'neon',   label: 'Neon',   color: '#1A4A6A' },
+                  ].map(b => (
+                    <button
+                      key={b.id}
+                      onClick={() => setSettings(prev => ({ ...prev, boardStyle: b.id }))}
+                      className={`flex-1 py-2 rounded text-xs font-inter border transition-all text-center
+                        ${settings.boardStyle === b.id
+                          ? 'border-gold text-gold bg-charcoal'
+                          : 'border-carbon text-ash hover:border-ash hover:text-ivory'}`}
+                    >
+                      <div
+                        className="w-4 h-4 rounded mx-auto mb-1"
+                        style={{ background: b.color }}
+                      />
+                      {b.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
           <button onClick={() => navigate('/')} className="text-ash hover:text-ivory font-inter text-xs transition-colors">✕ Exit</button>
         </div>
