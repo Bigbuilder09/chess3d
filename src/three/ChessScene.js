@@ -1,0 +1,117 @@
+import * as THREE from 'three'
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js'
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js'
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
+
+let scene, camera, renderer, composer
+let dirLight, ambientLight
+
+export function initScene(canvas) {
+  // Guard against double-init (React StrictMode invokes effects twice).
+  // Dispose any existing WebGL context before creating a new one.
+  if (renderer) {
+    disposeScene()
+  }
+
+  // Scene
+  scene = new THREE.Scene()
+  scene.background = new THREE.Color('#0D0D0F')
+  scene.fog = new THREE.Fog('#0D0D0F', 20, 40)
+
+  // Camera
+  camera = new THREE.PerspectiveCamera(
+    45,
+    canvas.clientWidth / canvas.clientHeight,
+    0.1,
+    100
+  )
+  camera.position.set(0, 8, 10)
+  camera.lookAt(0, 0, 0)
+
+  // Renderer
+  renderer = new THREE.WebGLRenderer({
+    canvas,
+    antialias: true,
+    alpha: false
+  })
+  renderer.setSize(canvas.clientWidth, canvas.clientHeight)
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+  renderer.shadowMap.enabled = true
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap
+  renderer.toneMapping = THREE.ACESFilmicToneMapping
+  renderer.toneMappingExposure = 1.2
+  renderer.outputColorSpace = THREE.SRGBColorSpace
+
+  // Lighting
+  ambientLight = new THREE.AmbientLight('#ffffff', 0.5)
+  scene.add(ambientLight)
+
+  dirLight = new THREE.DirectionalLight('#fff8e7', 1.5)
+  dirLight.position.set(5, 12, 8)
+  dirLight.castShadow = true
+  dirLight.shadow.mapSize.width = 2048
+  dirLight.shadow.mapSize.height = 2048
+  dirLight.shadow.camera.near = 0.5
+  dirLight.shadow.camera.far = 50
+  dirLight.shadow.camera.left = -10
+  dirLight.shadow.camera.right = 10
+  dirLight.shadow.camera.top = 10
+  dirLight.shadow.camera.bottom = -10
+  dirLight.shadow.bias = -0.001
+  scene.add(dirLight)
+
+  // Rim light
+  const rimLight = new THREE.DirectionalLight('#5C6BC0', 0.4)
+  rimLight.position.set(-8, 6, -6)
+  scene.add(rimLight)
+
+  // Post-processing
+  composer = new EffectComposer(renderer)
+  composer.addPass(new RenderPass(scene, camera))
+
+  const bloomPass = new UnrealBloomPass(
+    new THREE.Vector2(canvas.clientWidth, canvas.clientHeight),
+    0.4,   // strength
+    0.3,   // radius
+    0.7    // threshold
+  )
+  composer.addPass(bloomPass)
+
+  // Resize handler
+  const handleResize = () => {
+    const w = canvas.clientWidth
+    const h = canvas.clientHeight
+    camera.aspect = w / h
+    camera.updateProjectionMatrix()
+    renderer.setSize(w, h)
+    composer.setSize(w, h)
+  }
+  window.addEventListener('resize', handleResize)
+
+  // Store cleanup ref
+  scene.userData._cleanupResize = handleResize
+
+  return { scene, camera, renderer, composer }
+}
+
+export function renderScene() {
+  if (composer) composer.render()
+}
+
+export function disposeScene() {
+  if (scene?.userData._cleanupResize) {
+    window.removeEventListener('resize', scene.userData._cleanupResize)
+  }
+  if (renderer) {
+    renderer.dispose()
+    renderer = null
+  }
+  scene = null
+  camera = null
+  composer = null
+}
+
+export function getScene()    { return scene }
+export function getCamera()   { return camera }
+export function getRenderer() { return renderer }
+export function getComposer() { return composer }
