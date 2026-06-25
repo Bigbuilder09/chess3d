@@ -21,119 +21,94 @@ function hexToRgb(hex) {
 
 // ─── Regular capture: stone-grey particles ────────────────────────────────────
 
-export function playCaptureEffect(scene, controls, square, pieceValue = 1) {
+export function playCaptureEffect(scene, controls, square, pieceValue = 1, capturedColor = 'white') {
   const pos = squareToWorld(square)
   const isQueenCapture = pieceValue >= 9
 
   if (isQueenCapture) {
     playQueenCaptureEffect(scene, controls, pos)
   } else {
-    playRegularCaptureEffect(scene, pos)
+    playRegularCaptureEffect(scene, pos, capturedColor)
   }
 }
 
-function playRegularCaptureEffect(scene, pos) {
-  const count = 20
-  const colors = ['#8A8A9A', '#6B6B7C', '#AAAABC', '#5A5A6A']
-
-  const positions = new Float32Array(count * 3)
-  const colorsArr = new Float32Array(count * 3)
-  const velocities = []
-
-  for (let i = 0; i < count; i++) {
-    positions[i * 3]     = pos.x
-    positions[i * 3 + 1] = pos.y
-    positions[i * 3 + 2] = pos.z
-
-    const c = hexToRgb(colors[Math.floor(Math.random() * colors.length)])
-    colorsArr[i * 3]     = c.r
-    colorsArr[i * 3 + 1] = c.g
-    colorsArr[i * 3 + 2] = c.b
-
-    const { x, z } = randomInRadius(1.5)
-    velocities.push({
-      x: x * 0.03,
-      y: (Math.random() * 0.04 + 0.02),
-      z: z * 0.03
-    })
-  }
-
-  spawnParticles(scene, positions, colorsArr, velocities, count, 600, 3)
+function playRegularCaptureEffect(scene, pos, capturedColor) {
+  const colors = capturedColor === 'white'
+    ? ['#F0EAD6', '#D4C9A8', '#BFB49A', '#E8E0CC']
+    : ['#2A2240', '#1E1B2E', '#3D3560', '#4A4270']
+  spawnShards(scene, pos, 18, colors, 1.5, 700)
+  spawnLightFlash(scene, pos, capturedColor === 'white' ? '#F0EAD6' : '#6B5CE7', 6, 400)
 }
 
 function playQueenCaptureEffect(scene, controls, pos) {
-  const count = 60
-  const colors = ['#C8A96E', '#E84040', '#FFD700', '#FF6B6B', '#D4A043']
+  spawnShards(scene, pos, 55, ['#C8A96E', '#FFD700', '#E84040', '#FF6B6B', '#FFF8DC', '#D4A043'], 3, 1100)
+  spawnLightFlash(scene, pos, '#FFD700', 12, 600)
 
-  const positions = new Float32Array(count * 3)
-  const colorsArr = new Float32Array(count * 3)
-  const velocities = []
-
-  for (let i = 0; i < count; i++) {
-    positions[i * 3]     = pos.x
-    positions[i * 3 + 1] = pos.y
-    positions[i * 3 + 2] = pos.z
-
-    const c = hexToRgb(colors[Math.floor(Math.random() * colors.length)])
-    colorsArr[i * 3]     = c.r
-    colorsArr[i * 3 + 1] = c.g
-    colorsArr[i * 3 + 2] = c.b
-
-    const { x, z } = randomInRadius(3)
-    velocities.push({
-      x: x * 0.04,
-      y: (Math.random() * 0.06 + 0.04),
-      z: z * 0.04
-    })
-  }
-
-  spawnParticles(scene, positions, colorsArr, velocities, count, 900, 5)
-  spawnShockwave(scene, pos)
-  shake(controls, 0.12, 300)
-}
-
-function spawnParticles(scene, positions, colors, velocities, count, lifetime, size) {
-  const geo = new THREE.BufferGeometry()
-  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3))
-  geo.setAttribute('color',    new THREE.BufferAttribute(colors,    3))
-
-  const mat = new THREE.PointsMaterial({
-    size,
-    vertexColors: true,
-    transparent: true,
-    opacity: 1,
-    sizeAttenuation: true,
-    depthWrite: false
+  // 3 staggered shockwave rings
+  ;[0, 120, 240].forEach(delay => {
+    setTimeout(() => spawnShockwave(scene, pos), delay)
   })
 
-  const points = new THREE.Points(geo, mat)
-  scene.add(points)
+  shake(controls, 0.15, 350)
+}
+
+function spawnShards(scene, pos, count, colors, speed, lifetime) {
+  const shards = []
+  for (let i = 0; i < count; i++) {
+    const geo = new THREE.OctahedronGeometry(0.04 + Math.random() * 0.05, 0)
+    const c = colors[Math.floor(Math.random() * colors.length)]
+    const mat = new THREE.MeshStandardMaterial({ color: c, roughness: 0.4, metalness: 0.3, flatShading: true })
+    const mesh = new THREE.Mesh(geo, mat)
+    mesh.position.set(pos.x, pos.y + 0.1, pos.z)
+    mesh.castShadow = false
+
+    const angle = Math.random() * Math.PI * 2
+    const r = 0.3 + Math.random() * speed
+    const vy = 0.04 + Math.random() * 0.06
+    mesh.userData.vel = { x: Math.cos(angle) * r * 0.04, y: vy, z: Math.sin(angle) * r * 0.04 }
+    mesh.userData.rot = { x: (Math.random()-0.5)*0.2, y: (Math.random()-0.5)*0.2, z: (Math.random()-0.5)*0.2 }
+
+    scene.add(mesh)
+    shards.push(mesh)
+  }
 
   const startTime = performance.now()
-  const posArr = geo.attributes.position.array
-
   function tick() {
-    const elapsed = performance.now() - startTime
-    const t = elapsed / lifetime
+    const t = (performance.now() - startTime) / lifetime
     if (t >= 1) {
-      scene.remove(points)
-      geo.dispose()
-      mat.dispose()
+      shards.forEach(m => {
+        scene.remove(m)
+        m.geometry.dispose()
+        m.material.dispose()
+      })
       return
     }
-
-    mat.opacity = 1 - t
-
-    for (let i = 0; i < count; i++) {
-      posArr[i * 3]     += velocities[i].x
-      posArr[i * 3 + 1] += velocities[i].y - (t * 0.02) // gravity
-      posArr[i * 3 + 2] += velocities[i].z
-    }
-    geo.attributes.position.needsUpdate = true
-
+    const gravity = t * 0.015
+    shards.forEach(m => {
+      m.position.x += m.userData.vel.x
+      m.position.y += m.userData.vel.y - gravity
+      m.position.z += m.userData.vel.z
+      m.rotation.x += m.userData.rot.x
+      m.rotation.y += m.userData.rot.y
+      m.rotation.z += m.userData.rot.z
+      m.material.opacity = 1 - t
+      m.material.transparent = true
+    })
     requestAnimationFrame(tick)
   }
   requestAnimationFrame(tick)
+}
+
+function spawnLightFlash(scene, pos, color, intensity, duration) {
+  const light = new THREE.PointLight(color, intensity, 6)
+  light.position.set(pos.x, pos.y + 0.5, pos.z)
+  scene.add(light)
+  gsap.to(light, {
+    intensity: 0,
+    duration: duration / 1000,
+    ease: 'power2.out',
+    onComplete: () => scene.remove(light)
+  })
 }
 
 function spawnShockwave(scene, pos) {
@@ -246,30 +221,10 @@ export function playCheckmateEffect(scene, controls, kingMesh) {
       ease: 'bounce.out'
     })
 
-    // 80 gold/red particles from king position
+    // 80 gold/red shards from king position
     const pos = kingMesh.position.clone()
-    const count = 80
-    const colors = ['#C8A96E', '#E84040', '#FFD700', '#FF6B6B', '#FFFFFF']
-    const positions = new Float32Array(count * 3)
-    const colorsArr = new Float32Array(count * 3)
-    const velocities = []
-
-    for (let i = 0; i < count; i++) {
-      positions[i * 3]     = pos.x
-      positions[i * 3 + 1] = pos.y
-      positions[i * 3 + 2] = pos.z
-      const c = hexToRgb(colors[Math.floor(Math.random() * colors.length)])
-      colorsArr[i * 3]     = c.r
-      colorsArr[i * 3 + 1] = c.g
-      colorsArr[i * 3 + 2] = c.b
-      const { x, z } = randomInRadius(4)
-      velocities.push({
-        x: x * 0.05,
-        y: Math.random() * 0.08 + 0.05,
-        z: z * 0.05
-      })
-    }
-    spawnParticles(scene, positions, colorsArr, velocities, count, 1500, 6)
+    spawnShards(scene, pos, 80, ['#C8A96E', '#E84040', '#FFD700', '#FF6B6B', '#FFFFFF'], 4, 1500)
+    spawnLightFlash(scene, pos, '#FFD700', 14, 800)
   }
 
   // Camera shake
