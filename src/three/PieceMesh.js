@@ -1,10 +1,14 @@
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js'
 import { gsap } from 'gsap'
 import { squareToWorld } from './BoardMesh.js'
 
 // ─── GLB model loader & cache ─────────────────────────────────────────────────
+const draco = new DRACOLoader()
+draco.setDecoderPath('/draco/')
 const loader = new GLTFLoader()
+loader.setDRACOLoader(draco)
 const MODEL_CACHE = {}  // type → THREE.Group (template clone)
 
 const GLB_MAP = {
