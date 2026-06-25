@@ -333,12 +333,30 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
     }
   }, [isMyTurn, gameOver, selectedSquare, selectSquare, clearSelection, applyMove])
 
+  const handleCanvasTouch = useCallback((e) => {
+    e.preventDefault()
+    const touch = e.changedTouches[0]
+    if (!touch) return
+    const syntheticEvent = {
+      clientX: touch.clientX,
+      clientY: touch.clientY
+    }
+    handleCanvasClick(syntheticEvent)
+  }, [handleCanvasClick])
+
   const handlePromotion = (p) => {
     if (!promotionPending) return
     const chess = localChessRef.current
     const moveResult = chess.move({ from: promotionPending.from, to: promotionPending.to, promotion: p })
     if (moveResult) applyMove(moveResult)
     setPromotionPending(null)
+  }
+
+  // ── Resign ────────────────────────────────────────────────────────────────
+  const handleBotResign = () => {
+    setGameOver({ winner: botColor, reason: 'resignation' })
+    playGameEndSound('lose')
+    setTimeout(() => navigate('/'), 3000)
   }
 
   // ── Settings mini panel ───────────────────────────────────────────────────
@@ -434,9 +452,31 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
         </div>
       </div>
 
-      <div className="flex-1 flex overflow-hidden min-h-0">
-        {/* Left: player panels */}
-        <div className="flex flex-col justify-between py-3 px-2 flex-shrink-0" style={{ width: 220, borderRight: '1px solid #2A2A3C', background: '#14141F' }}>
+      {/* Main area — desktop: row, mobile: column */}
+      <div className="flex-1 flex flex-col md:flex-row overflow-hidden min-h-0">
+
+        {/* Opponent (bot) panel — mobile: top strip */}
+        <div className="md:hidden flex-shrink-0 px-3 py-2 flex items-center justify-between"
+             style={{ background: '#14141F', borderBottom: '1px solid #2A2A3C' }}>
+          <PlayerPanel
+            name={`Bot (${difficulty})`}
+            rating={{ easy: 800, medium: 1400, hard: 2000 }[difficulty]}
+            timeMs={botTimeMs}
+            isActive={currentTurn === botColor}
+            isInCheck={isCheck && currentTurn === botColor}
+            captures={capturedPieces[botColor] || []}
+            color={botColor}
+            onTick={t => setBotTimeMs(t)}
+            onTimeout={() => {
+              setGameOver({ winner: myColor, reason: 'timeout' })
+              playGameEndSound('win')
+              setTimeout(() => navigate('/'), 3000)
+            }}
+            compact
+          />
+        </div>
+        {/* Left sidebar — desktop only */}
+        <div className="hidden md:flex flex-col justify-between py-3 px-2 flex-shrink-0" style={{ width: 220, borderRight: '1px solid #2A2A3C', background: '#14141F' }}>
           <PlayerPanel
             name={`Bot (${difficulty})`}
             rating={{ easy: 800, medium: 1400, hard: 2000 }[difficulty]}
@@ -471,13 +511,14 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
         </div>
 
         {/* Center: canvas */}
-        <div className="flex-1 relative min-w-0">
+        <div className="flex-1 relative min-w-0 min-h-0">
           <CheckBanner isInCheck={isCheck && currentTurn === myColor} isCheckmate={isCheckmate} />
           <canvas
             ref={canvasRef}
             className="w-full h-full block"
             onClick={handleCanvasClick}
-            style={{ cursor: isMyTurn ? 'crosshair' : 'default' }}
+            onTouchEnd={handleCanvasTouch}
+            style={{ cursor: isMyTurn ? 'crosshair' : 'default', touchAction: 'none' }}
           />
 
           {/* Promotion picker */}
@@ -510,19 +551,43 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
           )}
         </div>
 
-        {/* Right: move log */}
-        <div className="flex-shrink-0" style={{ width: 200 }}>
+        {/* Right: move log — desktop only */}
+        <div className="hidden md:block flex-shrink-0" style={{ width: 200 }}>
           <MoveLog
             moves={moves}
             onFlipBoard={() => {}}
-            onResign={() => {
-              setGameOver({ winner: botColor, reason: 'resignation' })
-              playGameEndSound('lose')
-              setTimeout(() => navigate('/'), 3000)
-            }}
+            onResign={handleBotResign}
             onOfferDraw={() => {}}
           />
         </div>
+
+        {/* My panel + controls — mobile only, bottom strip */}
+        <div className="md:hidden flex-shrink-0 px-3 py-2 flex items-center justify-between gap-2"
+             style={{ background: '#14141F', borderTop: '1px solid #2A2A3C' }}>
+          <PlayerPanel
+            name={playerInfo?.name || 'You'}
+            rating={playerInfo?.rating || 1200}
+            timeMs={myTimeMs}
+            isActive={currentTurn === myColor}
+            isInCheck={isCheck && currentTurn === myColor}
+            captures={capturedPieces[myColor] || []}
+            color={myColor}
+            onTick={t => setMyTimeMs(t)}
+            onTimeout={() => {
+              setGameOver({ winner: botColor, reason: 'timeout' })
+              playGameEndSound('lose')
+              setTimeout(() => navigate('/'), 3000)
+            }}
+            compact
+          />
+          <div className="flex gap-2">
+            <button onClick={handleBotResign}
+              className="px-3 py-1.5 text-ash border border-carbon rounded font-inter text-xs hover:border-ivory hover:text-ivory transition-colors">
+              Resign
+            </button>
+          </div>
+        </div>
+
       </div>
     </div>
   )

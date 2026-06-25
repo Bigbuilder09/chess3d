@@ -456,6 +456,17 @@ export default function GameScreen({ setGameResult, playerInfo, settings, setSet
     }
   }, [isMyTurn, gameOver, selectedSquare, selectSquare, clearSelection])
 
+  const handleCanvasTouch = useCallback((e) => {
+    e.preventDefault()
+    const touch = e.changedTouches[0]
+    if (!touch) return
+    const syntheticEvent = {
+      clientX: touch.clientX,
+      clientY: touch.clientY
+    }
+    handleCanvasClick(syntheticEvent)
+  }, [handleCanvasClick])
+
   function checkPromotion(from, to) {
     const piece = pieceMapRef.current[from]
     if (!piece || piece.userData.pieceType !== 'p') return false
@@ -625,27 +636,32 @@ export default function GameScreen({ setGameResult, playerInfo, settings, setSet
         </div>
       </div>
 
-      {/* Main area */}
-      <div className="flex-1 flex overflow-hidden min-h-0">
-        {/* Left: player panels */}
-        <div
-          className="flex flex-col justify-between py-3 px-2 flex-shrink-0"
-          style={{ width: 220, borderRight: '1px solid #2A2A3C', background: '#14141F' }}
-        >
+      {/* Main area — desktop: row, mobile: column */}
+      <div className="flex-1 flex flex-col md:flex-row overflow-hidden min-h-0">
+
+        {/* Opponent panel — mobile: top strip */}
+        <div className="md:hidden flex-shrink-0 px-3 py-2 flex items-center justify-between"
+             style={{ background: '#14141F', borderBottom: '1px solid #2A2A3C' }}>
+          <PlayerPanel {...oppPanelProps} compact />
+        </div>
+        {/* Left sidebar — desktop only */}
+        <div className="hidden md:flex flex-col justify-between py-3 px-2 flex-shrink-0"
+             style={{ width: 220, borderRight: '1px solid #2A2A3C', background: '#14141F' }}>
           <PlayerPanel {...oppPanelProps} />
           <div className="flex-1" />
           <PlayerPanel {...myPanelProps} />
         </div>
 
         {/* Center: Three.js canvas */}
-        <div className="flex-1 relative min-w-0">
+        <div className="flex-1 relative min-w-0 min-h-0">
           <CheckBanner isInCheck={isCheck && currentTurn === myColor} isCheckmate={isCheckmate} />
 
           <canvas
             ref={canvasRef}
             className="w-full h-full block"
             onClick={handleCanvasClick}
-            style={{ cursor: isMyTurn ? 'crosshair' : 'default' }}
+            onTouchEnd={handleCanvasTouch}
+            style={{ cursor: isMyTurn ? 'crosshair' : 'default', touchAction: 'none' }}
           />
 
           {/* Draw offer banner */}
@@ -712,11 +728,8 @@ export default function GameScreen({ setGameResult, playerInfo, settings, setSet
           )}
         </div>
 
-        {/* Right: move log */}
-        <div
-          className="flex-shrink-0"
-          style={{ width: 200 }}
-        >
+        {/* Right: move log — desktop only */}
+        <div className="hidden md:block flex-shrink-0" style={{ width: 200 }}>
           <MoveLog
             moves={moves}
             onFlipBoard={handleFlipBoard}
@@ -725,6 +738,23 @@ export default function GameScreen({ setGameResult, playerInfo, settings, setSet
             drawOfferSent={myDrawOfferSent}
           />
         </div>
+
+        {/* My panel + controls — mobile only, bottom strip */}
+        <div className="md:hidden flex-shrink-0 px-3 py-2 flex items-center justify-between gap-2"
+             style={{ background: '#14141F', borderTop: '1px solid #2A2A3C' }}>
+          <PlayerPanel {...myPanelProps} compact />
+          <div className="flex gap-2">
+            <button onClick={handleResign}
+              className="px-3 py-1.5 text-ash border border-carbon rounded font-inter text-xs hover:border-ivory hover:text-ivory transition-colors">
+              Resign
+            </button>
+            <button onClick={handleOfferDraw}
+              className="px-3 py-1.5 text-ash border border-carbon rounded font-inter text-xs hover:border-ivory hover:text-ivory transition-colors">
+              Draw
+            </button>
+          </div>
+        </div>
+
       </div>
     </div>
   )
