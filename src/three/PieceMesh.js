@@ -193,17 +193,39 @@ function createSymbolPiece(type, color, square, scene) {
 
 function getLowPolyMat(color) {
   return color === 'white'
-    ? new THREE.MeshStandardMaterial({ color: '#E8E0D0', roughness: 0.4, metalness: 0.15 })
-    : new THREE.MeshStandardMaterial({ color: '#2A2240', roughness: 0.4, metalness: 0.2 })
+    ? new THREE.MeshStandardMaterial({ color: '#E8E0CC', roughness: 0.6, metalness: 0.1, flatShading: true })
+    : new THREE.MeshStandardMaterial({ color: '#1E1B2E', roughness: 0.5, metalness: 0.2, flatShading: true })
 }
 
 function buildLowPolyPawn(color) {
   const g = new THREE.Group()
   const mat = getLowPolyMat(color)
-  // Base: cylinder h=0.5, center at y=0.25
-  addMesh(g, new THREE.CylinderGeometry(0.18, 0.28, 0.5, 8), mat, 0, 0.25)
-  // Head: sphere at top of base
-  addMesh(g, new THREE.SphereGeometry(0.22, 6, 6), mat, 0, 0.72)
+  // Wide flat base
+  addMesh(g, new THREE.CylinderGeometry(0.28, 0.32, 0.10, 6), mat, 0, 0.05)
+  // Tapered stem
+  addMesh(g, new THREE.CylinderGeometry(0.12, 0.24, 0.38, 6), mat, 0, 0.29)
+  // Round head
+  addMesh(g, new THREE.SphereGeometry(0.20, 6, 5), mat, 0, 0.68)
+  return g
+}
+
+function buildLowPolyRook(color) {
+  const g = new THREE.Group()
+  const mat = getLowPolyMat(color)
+  // Base
+  addMesh(g, new THREE.CylinderGeometry(0.30, 0.34, 0.10, 6), mat, 0, 0.05)
+  // Column
+  addMesh(g, new THREE.CylinderGeometry(0.22, 0.28, 0.52, 6), mat, 0, 0.36)
+  // Wide top platform
+  addMesh(g, new THREE.CylinderGeometry(0.30, 0.24, 0.12, 6), mat, 0, 0.68)
+  // 4 battlements at corners
+  for (let i = 0; i < 4; i++) {
+    const angle = (i / 4) * Math.PI * 2
+    const b = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.16, 0.10), mat)
+    b.position.set(Math.cos(angle) * 0.18, 0.82, Math.sin(angle) * 0.18)
+    b.castShadow = true
+    g.add(b)
+  }
   return g
 }
 
@@ -211,58 +233,74 @@ function buildLowPolyKnight(color) {
   const g = new THREE.Group()
   const mat = getLowPolyMat(color)
   // Base
-  addMesh(g, new THREE.CylinderGeometry(0.2, 0.3, 0.5, 8), mat, 0, 0.25)
-  // Angled body box
-  const body = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.45, 0.2), mat)
-  body.position.set(0.05, 0.725, 0)
-  body.rotation.z = -0.2
-  body.castShadow = true
-  g.add(body)
+  addMesh(g, new THREE.CylinderGeometry(0.28, 0.32, 0.10, 6), mat, 0, 0.05)
+  // Neck
+  addMesh(g, new THREE.CylinderGeometry(0.14, 0.22, 0.36, 6), mat, 0, 0.28)
+  // Head body — angled horse silhouette
+  const head = new THREE.Mesh(new THREE.BoxGeometry(0.20, 0.30, 0.26), mat)
+  head.position.set(0, 0.72, 0)
+  head.rotation.z = -0.3
+  head.castShadow = true
+  g.add(head)
+  // Snout — gives the horse-face look
+  const snout = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.14, 0.18), mat)
+  snout.position.set(0.10, 0.60, 0)
+  snout.castShadow = true
+  g.add(snout)
   return g
 }
 
 function buildLowPolyBishop(color) {
   const g = new THREE.Group()
   const mat = getLowPolyMat(color)
-  // Base cylinder h=0.6, center at y=0.3
-  addMesh(g, new THREE.CylinderGeometry(0.16, 0.26, 0.6, 8), mat, 0, 0.3)
-  // Tall cone, center at y=0.6 + 0.35 = 0.95
-  addMesh(g, new THREE.ConeGeometry(0.22, 0.7, 6), mat, 0, 0.95)
-  // Tip sphere at top of cone: 0.6 + 0.7 + 0.05 = 1.35
-  addMesh(g, new THREE.SphereGeometry(0.1, 6, 6), mat, 0, 1.35)
-  return g
-}
-
-function buildLowPolyRook(color) {
-  const g = new THREE.Group()
-  const mat = getLowPolyMat(color)
-  // Base cylinder h=0.6, center at y=0.3
-  addMesh(g, new THREE.CylinderGeometry(0.22, 0.3, 0.6, 8), mat, 0, 0.3)
-  // Top cap h=0.3, center at y=0.6+0.15=0.75
-  addMesh(g, new THREE.CylinderGeometry(0.28, 0.28, 0.3, 8), mat, 0, 0.75)
+  // Base
+  addMesh(g, new THREE.CylinderGeometry(0.28, 0.32, 0.10, 6), mat, 0, 0.05)
+  // Body — tall taper
+  addMesh(g, new THREE.CylinderGeometry(0.10, 0.24, 0.56, 6), mat, 0, 0.38)
+  // Collar
+  addMesh(g, new THREE.CylinderGeometry(0.16, 0.12, 0.10, 6), mat, 0, 0.71)
+  // Tall pointed cone
+  addMesh(g, new THREE.ConeGeometry(0.13, 0.46, 6), mat, 0, 1.04)
+  // Finial tip
+  addMesh(g, new THREE.SphereGeometry(0.06, 6, 4), mat, 0, 1.34)
   return g
 }
 
 function buildLowPolyQueen(color) {
   const g = new THREE.Group()
   const mat = getLowPolyMat(color)
-  // Base h=0.5, center at y=0.25
-  addMesh(g, new THREE.CylinderGeometry(0.18, 0.28, 0.5, 8), mat, 0, 0.25)
-  // Middle sphere: y=0.5+0.28=0.78
-  addMesh(g, new THREE.SphereGeometry(0.28, 8, 8), mat, 0, 0.78)
-  // Crown octahedron: y=0.78+0.28+0.22=1.28
-  addMesh(g, new THREE.OctahedronGeometry(0.22), mat, 0, 1.28)
+  // Base
+  addMesh(g, new THREE.CylinderGeometry(0.30, 0.34, 0.10, 6), mat, 0, 0.05)
+  // Stem
+  addMesh(g, new THREE.CylinderGeometry(0.12, 0.26, 0.52, 6), mat, 0, 0.36)
+  // Central orb
+  addMesh(g, new THREE.SphereGeometry(0.24, 7, 6), mat, 0, 0.80)
+  // Crown band
+  addMesh(g, new THREE.CylinderGeometry(0.22, 0.20, 0.12, 6), mat, 0, 1.06)
+  // 5 crown spikes arranged in a circle
+  for (let i = 0; i < 5; i++) {
+    const angle = (i / 5) * Math.PI * 2
+    const spike = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.22, 5), mat)
+    spike.position.set(Math.cos(angle) * 0.14, 1.24, Math.sin(angle) * 0.14)
+    spike.castShadow = true
+    g.add(spike)
+  }
   return g
 }
 
 function buildLowPolyKing(color) {
   const g = new THREE.Group()
   const mat = getLowPolyMat(color)
-  // Base h=0.5, center at y=0.25
-  addMesh(g, new THREE.CylinderGeometry(0.18, 0.28, 0.5, 8), mat, 0, 0.25)
-  // Cross: two intersecting boxes h=0.7, center at y=0.5+0.35=0.85
-  addMesh(g, new THREE.BoxGeometry(0.36, 0.7, 0.12), mat, 0, 0.85)
-  addMesh(g, new THREE.BoxGeometry(0.12, 0.7, 0.36), mat, 0, 0.85)
+  // Base
+  addMesh(g, new THREE.CylinderGeometry(0.30, 0.34, 0.10, 6), mat, 0, 0.05)
+  // Stem
+  addMesh(g, new THREE.CylinderGeometry(0.12, 0.26, 0.56, 6), mat, 0, 0.38)
+  // Collar
+  addMesh(g, new THREE.CylinderGeometry(0.20, 0.16, 0.10, 6), mat, 0, 0.77)
+  // Cross vertical bar
+  addMesh(g, new THREE.BoxGeometry(0.09, 0.44, 0.09), mat, 0, 1.04)
+  // Cross horizontal bar
+  addMesh(g, new THREE.BoxGeometry(0.30, 0.09, 0.09), mat, 0, 1.18)
   return g
 }
 
