@@ -1,6 +1,35 @@
 import * as THREE from 'three'
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { gsap } from 'gsap'
 import { squareToWorld } from './BoardMesh.js'
+
+// ─── GLB model loader & cache ─────────────────────────────────────────────────
+const loader = new GLTFLoader()
+const MODEL_CACHE = {}  // type → THREE.Group (template clone)
+
+const GLB_MAP = {
+  p: '/models/pawn.glb',
+  r: '/models/rook.glb',
+  n: '/models/knight.glb',
+  b: '/models/bishop.glb',
+  q: '/models/queen.glb',
+  k: '/models/king.glb'
+}
+
+export function preloadModels() {
+  const promises = Object.entries(GLB_MAP).map(([type, url]) =>
+    new Promise((resolve, reject) => {
+      loader.load(url, (gltf) => {
+        MODEL_CACHE[type] = gltf.scene
+        resolve()
+      }, undefined, reject)
+    })
+  )
+  return Promise.all(promises)
+}
+
+const GLB_WHITE_MAT = () => new THREE.MeshStandardMaterial({ color: '#F0EAD6', roughness: 0.35, metalness: 0.15 })
+const GLB_BLACK_MAT = () => new THREE.MeshStandardMaterial({ color: '#1E1A3A', roughness: 0.35, metalness: 0.25 })
 
 // ─── Classic piece materials ───────────────────────────────────────────────────
 const WHITE_MAT = () => new THREE.MeshStandardMaterial({
@@ -343,6 +372,46 @@ function createLowPolyPiece(type, color, square, scene) {
   return group
 }
 
+// ─── GLB piece builder ────────────────────────────────────────────────────────
+
+function createGLBPiece(type, color, square, scene) {
+  const template = MODEL_CACHE[type.toLowerCase()]
+  if (!template) return createClassicPiece(type, color, square, scene) // fallback
+
+  const group = template.clone(true)
+  const mat = color === 'white' ? GLB_WHITE_MAT() : GLB_BLACK_MAT()
+
+  group.traverse(child => {
+    if (child.isMesh) {
+      child.material = mat
+      child.castShadow = true
+      child.receiveShadow = true
+    }
+  })
+
+  // Normalize scale — GLB models vary in size; target bounding box height ~1.0
+  const box = new THREE.Box3().setFromObject(group)
+  const height = box.max.y - box.min.y
+  if (height > 0) {
+    const scale = 1.0 / height
+    group.scale.setScalar(scale)
+  }
+
+  // Align base to y=0
+  const box2 = new THREE.Box3().setFromObject(group)
+  group.position.y = -box2.min.y
+
+  const pos = squareToWorld(square)
+  group.position.x = pos.x
+  group.position.z = pos.z
+
+  group.userData = { pieceType: type.toLowerCase(), color, square }
+  group.name = `piece_${type}_${color}_${square}`
+
+  scene.add(group)
+  return group
+}
+
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 /**
@@ -355,6 +424,7 @@ function createLowPolyPiece(type, color, square, scene) {
  */
 export function createPiece(type, color, square, scene, style = 'classic') {
   switch (style) {
+    case 'glb':     return createGLBPiece(type, color, square, scene)
     case 'symbol':  return createSymbolPiece(type, color, square, scene)
     case 'lowpoly': return createLowPolyPiece(type, color, square, scene)
     default:        return createClassicPiece(type, color, square, scene)

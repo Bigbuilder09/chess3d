@@ -4,7 +4,7 @@ import * as THREE from 'three'
 import { Chess } from 'chess.js'
 import { initScene, renderScene, disposeScene } from '../three/ChessScene.js'
 import { createBoard, highlightSquare, clearAllHighlights, showLegalDots, clearLegalDots, getBoardGroup, updateBoardStyle } from '../three/BoardMesh.js'
-import { createPiece, movePiece, removePiece, selectPiece, deselectPiece, rebuildPieces } from '../three/PieceMesh.js'
+import { createPiece, movePiece, removePiece, selectPiece, deselectPiece, rebuildPieces, preloadModels } from '../three/PieceMesh.js'
 import { initControls, updateControls, disposeControls } from '../three/CameraController.js'
 import { playCaptureEffect, playCheckEffect, clearCheckEffect, playCheckmateEffect } from '../three/CaptureEffect.js'
 import { playMoveSound, playCaptureSound, playQueenCaptureSound, playCheckSound, playCheckmateSound, playGameEndSound } from '../audio/sounds.js'
@@ -76,21 +76,33 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
-    const { scene, camera } = initScene(canvas)
-    sceneRef.current = scene
-    cameraRef.current = camera
-    createBoard(scene, settings.boardStyle)
-    pieceMapRef.current = initBoardPieces(scene, settings.pieceStyle)
-    controlsRef.current = initControls(camera, { domElement: canvas })
 
     let rafId
-    function loop() {
-      rafId = requestAnimationFrame(loop)
-      updateControls()
-      renderScene()
+    async function init() {
+      const { scene, camera } = initScene(canvas)
+      sceneRef.current = scene
+      cameraRef.current = camera
+
+      try {
+        await preloadModels()
+      } catch (err) {
+        console.warn('GLB models failed to load, falling back to classic pieces:', err)
+      }
+
+      createBoard(scene, settings.boardStyle)
+      pieceMapRef.current = initBoardPieces(scene, settings.pieceStyle)
+      controlsRef.current = initControls(camera, { domElement: canvas })
+
+      function loop() {
+        rafId = requestAnimationFrame(loop)
+        updateControls()
+        renderScene()
+      }
+      loop()
+      animFrameRef.current = rafId
     }
-    loop()
-    animFrameRef.current = rafId
+
+    init()
 
     return () => {
       cancelAnimationFrame(rafId)
@@ -370,8 +382,9 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
       <p className="text-ivory font-inter text-xs mb-2">Piece Style</p>
       <div className="flex gap-2 mb-3">
         {[
-          { id: 'classic', label: 'Classic', desc: '3D shapes' },
-          { id: 'symbol',  label: 'Symbol',  desc: '♛ disc' },
+          { id: 'glb',     label: 'GLB',      desc: '3D model' },
+          { id: 'classic', label: 'Classic',  desc: '3D shapes' },
+          { id: 'symbol',  label: 'Symbol',   desc: '♛ disc' },
           { id: 'lowpoly', label: 'Low-poly', desc: 'Geometric' },
         ].map(s => (
           <button
