@@ -32,13 +32,19 @@ const RETRO_GLB_MAP = {
 const RETRO_MODEL_CACHE = {}
 
 export function preloadModels() {
-  const loadSet = (map, cache) =>
-    Object.entries(map).map(([type, url]) =>
-      new Promise((resolve, reject) => {
-        loader.load(url, (gltf) => { cache[type] = gltf.scene; resolve() }, undefined, reject)
-      })
-    )
-  return Promise.all([...loadSet(GLB_MAP, MODEL_CACHE), ...loadSet(RETRO_GLB_MAP, RETRO_MODEL_CACHE)])
+  const loadOne = (type, url, cache) =>
+    new Promise((resolve) => {
+      loader.load(
+        url,
+        (gltf) => { cache[type] = gltf.scene; resolve() },
+        undefined,
+        (err) => { console.warn(`Failed to load model ${url}:`, err); resolve() }
+      )
+    })
+  return Promise.all([
+    ...Object.entries(GLB_MAP).map(([type, url]) => loadOne(type, url, MODEL_CACHE)),
+    ...Object.entries(RETRO_GLB_MAP).map(([type, url]) => loadOne(type, url, RETRO_MODEL_CACHE))
+  ])
 }
 
 const GLB_WHITE_MAT = () => new THREE.MeshStandardMaterial({ color: '#C8A850', roughness: 0.25, metalness: 0.75 })
