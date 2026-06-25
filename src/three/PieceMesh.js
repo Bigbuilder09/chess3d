@@ -32,8 +32,8 @@ export function preloadModels() {
   return Promise.all(promises)
 }
 
-const GLB_WHITE_MAT = () => new THREE.MeshStandardMaterial({ color: '#F0EAD6', roughness: 0.35, metalness: 0.15 })
-const GLB_BLACK_MAT = () => new THREE.MeshStandardMaterial({ color: '#1E1A3A', roughness: 0.35, metalness: 0.25 })
+const GLB_WHITE_MAT = () => new THREE.MeshStandardMaterial({ color: '#C8A850', roughness: 0.25, metalness: 0.75 })
+const GLB_BLACK_MAT = () => new THREE.MeshStandardMaterial({ color: '#0A0A0F', roughness: 0.20, metalness: 0.85 })
 
 // ─── Classic piece materials ───────────────────────────────────────────────────
 const WHITE_MAT = () => new THREE.MeshStandardMaterial({
