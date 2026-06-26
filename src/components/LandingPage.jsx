@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { createBoard, disposeBoard, updateBoardStyle } from '../three/BoardMesh.js'
-import { createPiece, rebuildPieces } from '../three/PieceMesh.js'
+import { createPiece, rebuildPieces, preloadModels } from '../three/PieceMesh.js'
 import { useSocket } from '../hooks/useSocket.js'
 
 export default function LandingPage({ playerInfo, setPlayerInfo, botDifficulty, setBotDifficulty, settings, setSettings }) {
@@ -39,6 +39,9 @@ export default function LandingPage({ playerInfo, setPlayerInfo, botDifficulty, 
     renderer.setSize(w, h)
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
     renderer.shadowMap.enabled = true
+    renderer.toneMapping = THREE.ACESFilmicToneMapping
+    renderer.toneMappingExposure = 1.2
+    renderer.outputColorSpace = THREE.SRGBColorSpace
     rendererRef.current = renderer
 
     // Lights
@@ -70,6 +73,9 @@ export default function LandingPage({ playerInfo, setPlayerInfo, botDifficulty, 
       if (piece) pieceMap[sq] = piece
     })
     pieceMapRef.current = pieceMap
+
+    // Pre-load GLB models in background so switching to glb/retro style works instantly
+    preloadModels().catch(() => {})
 
     // Auto-rotate
     const controls = new OrbitControls(camera, renderer.domElement)
@@ -300,16 +306,18 @@ export default function LandingPage({ playerInfo, setPlayerInfo, botDifficulty, 
 
             {/* Piece style */}
             <p className="text-ivory font-inter text-xs mb-2">Piece Style</p>
-            <div className="flex gap-2 mb-4">
+            <div className="flex gap-1.5 mb-4 flex-wrap">
               {[
-                { id: 'classic', label: 'Classic', desc: '3D shapes' },
-                { id: 'symbol',  label: 'Symbol',  desc: '♛ disc' },
+                { id: 'glb',     label: 'GLB',      desc: '3D model' },
+                { id: 'retro',   label: 'Retro',    desc: '3D retro' },
+                { id: 'classic', label: 'Classic',  desc: '3D shapes' },
+                { id: 'symbol',  label: 'Symbol',   desc: '♛ disc' },
                 { id: 'lowpoly', label: 'Low-poly', desc: 'Geometric' },
               ].map(s => (
                 <button
                   key={s.id}
                   onClick={() => setSettings(prev => ({ ...prev, pieceStyle: s.id }))}
-                  className={`flex-1 py-2 px-1 rounded text-xs font-inter border transition-all text-center
+                  className={`flex-1 py-2 px-1 rounded text-xs font-inter border transition-all text-center min-w-[44px]
                     ${settings.pieceStyle === s.id
                       ? 'border-gold text-gold bg-charcoal'
                       : 'border-carbon text-ash hover:border-ash hover:text-ivory'}`}

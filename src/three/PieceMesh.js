@@ -47,22 +47,40 @@ export function preloadModels() {
   ])
 }
 
-const GLB_WHITE_MAT = () => new THREE.MeshStandardMaterial({ color: '#C8A850', roughness: 0.25, metalness: 0.75 })
-const GLB_BLACK_MAT = () => new THREE.MeshStandardMaterial({ color: '#0A0A0F', roughness: 0.20, metalness: 0.85 })
-
-const RETRO_WHITE_MAT = () => new THREE.MeshStandardMaterial({ color: '#B03030', roughness: 0.30, metalness: 0.60 })
-const RETRO_BLACK_MAT = () => new THREE.MeshStandardMaterial({ color: '#1A3A7A', roughness: 0.30, metalness: 0.60 })
-
-// ─── Classic piece materials ───────────────────────────────────────────────────
-const WHITE_MAT = () => new THREE.MeshStandardMaterial({
-  color: '#F0EAD6',
-  roughness: 0.3,
-  metalness: 0.1
+// Gold-lacquered vs obsidian-polished for GLB models
+const GLB_WHITE_MAT = () => new THREE.MeshPhysicalMaterial({
+  color: '#C9A84C', roughness: 0.12, metalness: 0.82,
+  clearcoat: 0.5, clearcoatRoughness: 0.15
 })
-const BLACK_MAT = () => new THREE.MeshStandardMaterial({
-  color: '#1A1A2A',
-  roughness: 0.3,
-  metalness: 0.2
+const GLB_BLACK_MAT = () => new THREE.MeshPhysicalMaterial({
+  color: '#07070D', roughness: 0.08, metalness: 0.92,
+  clearcoat: 0.7, clearcoatRoughness: 0.08
+})
+
+// Crimson vs royal-blue for retro models
+const RETRO_WHITE_MAT = () => new THREE.MeshPhysicalMaterial({
+  color: '#A82828', roughness: 0.22, metalness: 0.55,
+  clearcoat: 0.6, clearcoatRoughness: 0.12
+})
+const RETRO_BLACK_MAT = () => new THREE.MeshPhysicalMaterial({
+  color: '#152E70', roughness: 0.22, metalness: 0.55,
+  clearcoat: 0.6, clearcoatRoughness: 0.12
+})
+
+// ─── Classic piece materials — polished ivory vs lacquered ebony ───────────────
+const WHITE_MAT = () => new THREE.MeshPhysicalMaterial({
+  color: '#F2ECD8',
+  roughness: 0.18,
+  metalness: 0.0,
+  clearcoat: 0.85,
+  clearcoatRoughness: 0.08,
+})
+const BLACK_MAT = () => new THREE.MeshPhysicalMaterial({
+  color: '#14111F',
+  roughness: 0.15,
+  metalness: 0.05,
+  clearcoat: 0.90,
+  clearcoatRoughness: 0.06,
 })
 
 function getMat(color) {
@@ -206,15 +224,15 @@ function createSymbolTexture(type, color) {
 
 function createSymbolPiece(type, color, square, scene) {
   const g = new THREE.Group()
-  const bgColor = color === 'white' ? '#F0EAD6' : '#1A1A2A'
+  const bgColor = color === 'white' ? '#F2ECD8' : '#14111F'
 
   // Flat disc — CylinderGeometry groups: 0=side, 1=top, 2=bottom
   const discGeo = new THREE.CylinderGeometry(0.42, 0.45, 0.12, 32)
   const texture  = createSymbolTexture(type, color)
   const discMats = [
-    new THREE.MeshStandardMaterial({ color: bgColor, roughness: 0.5, metalness: 0.1 }),       // side
-    new THREE.MeshStandardMaterial({ map: texture,   roughness: 0.5, metalness: 0.1 }),        // top
-    new THREE.MeshStandardMaterial({ color: bgColor, roughness: 0.5, metalness: 0.1 })        // bottom
+    new THREE.MeshPhysicalMaterial({ color: bgColor, roughness: 0.25, metalness: 0.05, clearcoat: 0.7, clearcoatRoughness: 0.1 }),
+    new THREE.MeshPhysicalMaterial({ map: texture,   roughness: 0.30, metalness: 0.0,  clearcoat: 0.5, clearcoatRoughness: 0.15 }),
+    new THREE.MeshPhysicalMaterial({ color: bgColor, roughness: 0.25, metalness: 0.05, clearcoat: 0.7, clearcoatRoughness: 0.1 }),
   ]
   const disc = new THREE.Mesh(discGeo, discMats)
   disc.position.set(0, 0.06, 0)
@@ -224,7 +242,7 @@ function createSymbolPiece(type, color, square, scene) {
 
   // Thin ring underneath
   const ringGeo = new THREE.TorusGeometry(0.4, 0.04, 8, 32)
-  const ringMat = new THREE.MeshStandardMaterial({ color: bgColor, roughness: 0.6, metalness: 0.1 })
+  const ringMat = new THREE.MeshPhysicalMaterial({ color: bgColor, roughness: 0.30, metalness: 0.05, clearcoat: 0.6, clearcoatRoughness: 0.12 })
   const ring = new THREE.Mesh(ringGeo, ringMat)
   ring.rotation.x = Math.PI / 2
   ring.position.set(0, 0.01, 0)
@@ -244,8 +262,14 @@ function createSymbolPiece(type, color, square, scene) {
 
 function getLowPolyMat(color) {
   return color === 'white'
-    ? new THREE.MeshStandardMaterial({ color: '#E8E0CC', roughness: 0.6, metalness: 0.1, flatShading: true })
-    : new THREE.MeshStandardMaterial({ color: '#1E1B2E', roughness: 0.5, metalness: 0.2, flatShading: true })
+    ? new THREE.MeshPhysicalMaterial({
+        color: '#DDD5B8', roughness: 0.55, metalness: 0.05,
+        clearcoat: 0.3, clearcoatRoughness: 0.3, flatShading: true
+      })
+    : new THREE.MeshPhysicalMaterial({
+        color: '#1A172A', roughness: 0.45, metalness: 0.10,
+        clearcoat: 0.4, clearcoatRoughness: 0.25, flatShading: true
+      })
 }
 
 function buildLowPolyPawn(color) {
@@ -450,7 +474,8 @@ function createRetroPiece(type, color, square, scene) {
 
   const box = new THREE.Box3().setFromObject(group)
   const height = box.max.y - box.min.y
-  const normalizedScale = height > 0 ? 1.0 / height : 1
+  const sizeMultiplier = type.toLowerCase() === 'p' ? 0.5 : 1.0
+  const normalizedScale = (height > 0 ? 1.0 / height : 1) * sizeMultiplier
   group.scale.setScalar(normalizedScale)
 
   const box2 = new THREE.Box3().setFromObject(group)
