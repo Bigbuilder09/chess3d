@@ -47,27 +47,27 @@ export function preloadModels() {
   ])
 }
 
-// Gold-lacquered vs dark-steel for GLB models
+// Gold vs silver for GLB models
 const GLB_WHITE_MAT = () => new THREE.MeshPhysicalMaterial({
   color: '#C9A84C', roughness: 0.12, metalness: 0.82,
   clearcoat: 0.5, clearcoatRoughness: 0.15
 })
 const GLB_BLACK_MAT = () => new THREE.MeshPhysicalMaterial({
-  color: '#1C2235', roughness: 0.10, metalness: 0.88,
-  clearcoat: 0.7, clearcoatRoughness: 0.08
+  color: '#B0BEC8', roughness: 0.06, metalness: 0.96,
+  clearcoat: 0.6, clearcoatRoughness: 0.05
 })
 
-// Crimson vs royal-blue for retro models
+// Crimson vs silver for retro models
 const RETRO_WHITE_MAT = () => new THREE.MeshPhysicalMaterial({
   color: '#A82828', roughness: 0.22, metalness: 0.55,
   clearcoat: 0.6, clearcoatRoughness: 0.12
 })
 const RETRO_BLACK_MAT = () => new THREE.MeshPhysicalMaterial({
-  color: '#152E70', roughness: 0.22, metalness: 0.55,
-  clearcoat: 0.6, clearcoatRoughness: 0.12
+  color: '#B8C4CC', roughness: 0.10, metalness: 0.92,
+  clearcoat: 0.5, clearcoatRoughness: 0.08
 })
 
-// ─── Classic piece materials — polished ivory vs lacquered dark-walnut ─────────
+// ─── Classic piece materials — polished ivory vs mirror silver ─────────────────
 const WHITE_MAT = () => new THREE.MeshPhysicalMaterial({
   color: '#F2ECD8',
   roughness: 0.18,
@@ -76,11 +76,11 @@ const WHITE_MAT = () => new THREE.MeshPhysicalMaterial({
   clearcoatRoughness: 0.08,
 })
 const BLACK_MAT = () => new THREE.MeshPhysicalMaterial({
-  color: '#1E2840',
-  roughness: 0.18,
-  metalness: 0.08,
-  clearcoat: 0.90,
-  clearcoatRoughness: 0.06,
+  color: '#B8C8D4',
+  roughness: 0.08,
+  metalness: 0.95,
+  clearcoat: 0.65,
+  clearcoatRoughness: 0.05,
 })
 
 function getMat(color) {
@@ -224,7 +224,7 @@ function createSymbolTexture(type, color) {
 
 function createSymbolPiece(type, color, square, scene) {
   const g = new THREE.Group()
-  const bgColor = color === 'white' ? '#F2ECD8' : '#14111F'
+  const bgColor = color === 'white' ? '#F2ECD8' : '#B8C8D4'
 
   // Flat disc — CylinderGeometry groups: 0=side, 1=top, 2=bottom
   const discGeo = new THREE.CylinderGeometry(0.42, 0.45, 0.12, 32)
@@ -267,8 +267,8 @@ function getLowPolyMat(color) {
         clearcoat: 0.3, clearcoatRoughness: 0.3, flatShading: true
       })
     : new THREE.MeshPhysicalMaterial({
-        color: '#1A172A', roughness: 0.45, metalness: 0.10,
-        clearcoat: 0.4, clearcoatRoughness: 0.25, flatShading: true
+        color: '#C0CAD2', roughness: 0.22, metalness: 0.88,
+        clearcoat: 0.3, clearcoatRoughness: 0.2, flatShading: true
       })
 }
 
