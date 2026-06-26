@@ -25,9 +25,24 @@ export default function LandingPage({ playerInfo, setPlayerInfo, botDifficulty, 
     if (!canvas) return
 
     const scene = new THREE.Scene()
-    scene.background = new THREE.Color('#0D0D0F')
-    scene.fog = new THREE.FogExp2('#0D0D0F', 0.04)
+    scene.background = new THREE.Color('#080C18')
+    scene.fog = new THREE.FogExp2('#080C18', 0.035)
     sceneRef.current = scene
+
+    // Star field
+    const starPositions = new Float32Array(1200 * 3)
+    for (let i = 0; i < 1200; i++) {
+      const r = 28 + Math.random() * 18
+      const theta = Math.random() * Math.PI * 2
+      const phi = Math.acos(2 * Math.random() - 1)
+      starPositions[i * 3]     = r * Math.sin(phi) * Math.cos(theta)
+      starPositions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta)
+      starPositions[i * 3 + 2] = r * Math.cos(phi)
+    }
+    const starGeo = new THREE.BufferGeometry()
+    starGeo.setAttribute('position', new THREE.BufferAttribute(starPositions, 3))
+    const starMat = new THREE.PointsMaterial({ color: '#A8C4E0', size: 0.07, sizeAttenuation: true, transparent: true, opacity: 0.65 })
+    scene.add(new THREE.Points(starGeo, starMat))
 
     const w = canvas.clientWidth
     const h = canvas.clientHeight
@@ -183,7 +198,7 @@ export default function LandingPage({ playerInfo, setPlayerInfo, botDifficulty, 
       <div
         className="absolute inset-0"
         style={{
-          background: 'linear-gradient(to bottom, rgba(13,13,15,0.6) 0%, rgba(13,13,15,0.3) 40%, rgba(13,13,15,0.8) 100%)',
+          background: 'linear-gradient(to bottom, rgba(8,12,24,0.6) 0%, rgba(8,12,24,0.2) 40%, rgba(8,12,24,0.85) 100%)',
           zIndex: 1
         }}
       />

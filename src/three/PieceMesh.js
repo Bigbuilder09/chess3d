@@ -47,13 +47,13 @@ export function preloadModels() {
   ])
 }
 
-// Gold-lacquered vs obsidian-polished for GLB models
+// Gold-lacquered vs dark-steel for GLB models
 const GLB_WHITE_MAT = () => new THREE.MeshPhysicalMaterial({
   color: '#C9A84C', roughness: 0.12, metalness: 0.82,
   clearcoat: 0.5, clearcoatRoughness: 0.15
 })
 const GLB_BLACK_MAT = () => new THREE.MeshPhysicalMaterial({
-  color: '#07070D', roughness: 0.08, metalness: 0.92,
+  color: '#1C2235', roughness: 0.10, metalness: 0.88,
   clearcoat: 0.7, clearcoatRoughness: 0.08
 })
 
@@ -67,7 +67,7 @@ const RETRO_BLACK_MAT = () => new THREE.MeshPhysicalMaterial({
   clearcoat: 0.6, clearcoatRoughness: 0.12
 })
 
-// ─── Classic piece materials — polished ivory vs lacquered ebony ───────────────
+// ─── Classic piece materials — polished ivory vs lacquered dark-walnut ─────────
 const WHITE_MAT = () => new THREE.MeshPhysicalMaterial({
   color: '#F2ECD8',
   roughness: 0.18,
@@ -76,9 +76,9 @@ const WHITE_MAT = () => new THREE.MeshPhysicalMaterial({
   clearcoatRoughness: 0.08,
 })
 const BLACK_MAT = () => new THREE.MeshPhysicalMaterial({
-  color: '#14111F',
-  roughness: 0.15,
-  metalness: 0.05,
+  color: '#1E2840',
+  roughness: 0.18,
+  metalness: 0.08,
   clearcoat: 0.90,
   clearcoatRoughness: 0.06,
 })

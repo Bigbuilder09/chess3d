@@ -15,8 +15,23 @@ export function initScene(canvas) {
 
   // Scene
   scene = new THREE.Scene()
-  scene.background = new THREE.Color('#0D0D0F')
-  scene.fog = new THREE.Fog('#0D0D0F', 20, 40)
+  scene.background = new THREE.Color('#080C18')
+  scene.fog = new THREE.Fog('#080C18', 22, 42)
+
+  // Star field
+  const starPositions = new Float32Array(1200 * 3)
+  for (let i = 0; i < 1200; i++) {
+    const r = 28 + Math.random() * 18
+    const theta = Math.random() * Math.PI * 2
+    const phi = Math.acos(2 * Math.random() - 1)
+    starPositions[i * 3]     = r * Math.sin(phi) * Math.cos(theta)
+    starPositions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta)
+    starPositions[i * 3 + 2] = r * Math.cos(phi)
+  }
+  const starGeo = new THREE.BufferGeometry()
+  starGeo.setAttribute('position', new THREE.BufferAttribute(starPositions, 3))
+  const starMat = new THREE.PointsMaterial({ color: '#A8C4E0', size: 0.07, sizeAttenuation: true, transparent: true, opacity: 0.65 })
+  scene.add(new THREE.Points(starGeo, starMat))
 
   // Camera
   camera = new THREE.PerspectiveCamera(
