@@ -411,7 +411,7 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
                 <p className="text-ash font-inter text-xs tracking-widest uppercase mb-3">Customize</p>
 
                 <p className="text-ivory font-inter text-xs mb-2">Piece Style</p>
-                <div className="flex gap-2 mb-3">
+                <div className="flex flex-wrap gap-2 mb-3">
                   {[
                     { id: 'glb',     label: 'GLB',      desc: '3D model' },
                     { id: 'retro',   label: 'Retro',    desc: '3D retro' },
@@ -423,7 +423,8 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
                     <button
                       key={s.id}
                       onClick={() => setSettings(prev => ({ ...prev, pieceStyle: s.id }))}
-                      className={`flex-1 py-2 px-1 rounded text-xs font-inter border transition-all text-center
+                      style={{ width: 'calc(33% - 6px)' }}
+                      className={`py-2 px-1 rounded text-xs font-inter border transition-all text-center
                         ${settings.pieceStyle === s.id
                           ? 'border-gold text-gold bg-charcoal'
                           : 'border-carbon text-ash hover:border-ash hover:text-ivory'}`}
