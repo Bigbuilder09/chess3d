@@ -73,14 +73,14 @@ export function initScene(canvas) {
   renderer.shadowMap.enabled = true
   renderer.shadowMap.type = THREE.PCFSoftShadowMap
   renderer.toneMapping = THREE.ACESFilmicToneMapping
-  renderer.toneMappingExposure = 1.2
+  renderer.toneMappingExposure = 1.0
   renderer.outputColorSpace = THREE.SRGBColorSpace
 
   // Lighting
   ambientLight = new THREE.AmbientLight('#ffffff', 0.5)
   scene.add(ambientLight)
 
-  dirLight = new THREE.DirectionalLight('#fff8e7', 1.5)
+  dirLight = new THREE.DirectionalLight('#fff8e7', 1.1)
   dirLight.position.set(5, 12, 8)
   dirLight.castShadow = true
   dirLight.shadow.mapSize.width = 2048

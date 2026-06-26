@@ -82,8 +82,8 @@ export function createBoard(scene, boardStyle = 'wood') {
   const edgeGeo = new THREE.BoxGeometry(8.6, 0.05, 8.6)
   const edgeMat = new THREE.MeshStandardMaterial({
     color: '#C8A96E',
-    roughness: 0.5,
-    metalness: 0.3
+    roughness: 0.75,
+    metalness: 0.1
   })
   const edge = new THREE.Mesh(edgeGeo, edgeMat)
   edge.position.set(0, -0.025, 0)
