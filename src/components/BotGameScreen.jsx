@@ -418,8 +418,6 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
                     { id: 'classic', label: 'Classic',  desc: '3D shapes' },
                     { id: 'symbol',  label: 'Symbol',   desc: '♛ disc' },
                     { id: 'lowpoly', label: 'Low-poly', desc: 'Geometric' },
-                    { id: 'glass',   label: 'Glass',    desc: 'Crystal' },
-                    { id: 'wood',    label: 'Wood',     desc: 'Realistic' },
                   ].map(s => (
                     <button
                       key={s.id}

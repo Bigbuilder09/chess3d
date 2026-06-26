@@ -83,69 +83,6 @@ const BLACK_MAT = () => new THREE.MeshPhysicalMaterial({
   clearcoatRoughness: 0.05,
 })
 
-function getGlassMat(color) {
-  return new THREE.MeshPhysicalMaterial({
-    color: color === 'white' ? '#B8E8FF' : '#FFD8A0',
-    roughness: 0.05,
-    metalness: 0.0,
-    clearcoat: 1.0,
-    clearcoatRoughness: 0.05,
-    transparent: true,
-    opacity: 0.55,
-    emissive: new THREE.Color(color === 'white' ? '#003366' : '#663300'),
-    emissiveIntensity: 0.3,
-    depthWrite: false,
-  })
-}
-
-function getGlowOutlineMat(color) {
-  return new THREE.MeshBasicMaterial({
-    color: color === 'white' ? '#00AAFF' : '#FF6600',
-    side: THREE.BackSide,
-    transparent: true,
-    opacity: 0.88,
-  })
-}
-
-function createWoodTexture(baseHex, grainHex) {
-  const size = 256
-  const canvas = document.createElement('canvas')
-  canvas.width = size
-  canvas.height = size
-  const ctx = canvas.getContext('2d')
-  ctx.fillStyle = baseHex
-  ctx.fillRect(0, 0, size, size)
-  for (let i = 0; i < 42; i++) {
-    const y = (i / 42) * size
-    ctx.beginPath()
-    ctx.moveTo(0, y)
-    for (let x = 0; x <= size; x += 4) {
-      const wy = y + Math.sin(x * 0.09 + i * 2.1) * 3 + Math.sin(x * 0.03 + i * 0.7) * 5
-      ctx.lineTo(x, wy)
-    }
-    ctx.strokeStyle = grainHex
-    ctx.lineWidth = i % 5 === 0 ? 1.2 : 0.4
-    ctx.globalAlpha = i % 3 === 0 ? 0.22 : 0.09
-    ctx.stroke()
-  }
-  ctx.globalAlpha = 1
-  return new THREE.CanvasTexture(canvas)
-}
-
-function getWoodMat(color) {
-  const isWhite = color === 'white'
-  const tex = createWoodTexture(
-    isWhite ? '#D4BF96' : '#1A0F08',
-    isWhite ? '#A8936A' : '#0D0905'
-  )
-  return new THREE.MeshPhysicalMaterial({
-    map: tex,
-    roughness: isWhite ? 0.80 : 0.45,
-    metalness: 0.0,
-    clearcoat: isWhite ? 0.15 : 0.6,
-    clearcoatRoughness: isWhite ? 0.30 : 0.12,
-  })
-}
 
 function getMat(color) {
   return color === 'white' ? WHITE_MAT() : BLACK_MAT()
@@ -482,89 +419,6 @@ function createLowPolyPiece(type, color, square, scene) {
   return group
 }
 
-function createGlassPiece(type, color, square, scene) {
-  const builder = CLASSIC_BUILDERS[type.toLowerCase()]
-  if (!builder) return null
-
-  const group = builder(color)
-  const glassMat = getGlassMat(color)
-  const outlineMat = getGlowOutlineMat(color)
-
-  const meshes = []
-  group.traverse(child => {
-    if (child.isMesh) {
-      if (child.material) {
-        const mats = Array.isArray(child.material) ? child.material : [child.material]
-        mats.forEach(m => m.dispose())
-      }
-      child.material = glassMat
-      meshes.push(child)
-    }
-  })
-
-  meshes.forEach(child => {
-    const outline = new THREE.Mesh(child.geometry, outlineMat)
-    outline.position.copy(child.position)
-    outline.rotation.copy(child.rotation)
-    outline.scale.setScalar(1.08)
-    outline.castShadow = false
-    outline.receiveShadow = false
-    child.parent.add(outline)
-  })
-
-  const pos = squareToWorld(square)
-  group.position.copy(pos)
-  group.userData = { pieceType: type.toLowerCase(), color, square }
-  group.name = `piece_${type}_${color}_${square}`
-
-  scene.add(group)
-  return group
-}
-
-function createWoodPiece(type, color, square, scene) {
-  const mat = getWoodMat(color)
-  const template = MODEL_CACHE[type.toLowerCase()]
-
-  if (template) {
-    const group = template.clone(true)
-    group.traverse(child => {
-      if (child.isMesh) {
-        child.material = mat
-        child.castShadow = true
-        child.receiveShadow = true
-      }
-    })
-    const box = new THREE.Box3().setFromObject(group)
-    const height = box.max.y - box.min.y
-    const normalizedScale = height > 0 ? 1.0 / height : 1
-    group.scale.setScalar(normalizedScale)
-    const box2 = new THREE.Box3().setFromObject(group)
-    const baseY = -box2.min.y
-    const pos = squareToWorld(square)
-    group.position.set(pos.x, baseY, pos.z)
-    group.userData = { pieceType: type.toLowerCase(), color, square, normalizedScale, baseY }
-    group.name = `piece_${type}_${color}_${square}`
-    scene.add(group)
-    return group
-  }
-
-  const builder = CLASSIC_BUILDERS[type.toLowerCase()]
-  if (!builder) return null
-  const group = builder(color)
-  group.traverse(child => {
-    if (child.isMesh) {
-      const mats = Array.isArray(child.material) ? child.material : [child.material]
-      mats.forEach(m => m.dispose())
-      child.material = mat
-    }
-  })
-  const pos = squareToWorld(square)
-  group.position.copy(pos)
-  group.userData = { pieceType: type.toLowerCase(), color, square }
-  group.name = `piece_${type}_${color}_${square}`
-  scene.add(group)
-  return group
-}
 
 // ─── GLB piece builder ────────────────────────────────────────────────────────
 
@@ -655,8 +509,6 @@ export function createPiece(type, color, square, scene, style = 'classic') {
     case 'retro':   return createRetroPiece(type, color, square, scene)
     case 'symbol':  return createSymbolPiece(type, color, square, scene)
     case 'lowpoly': return createLowPolyPiece(type, color, square, scene)
-    case 'glass':   return createGlassPiece(type, color, square, scene)
-    case 'wood':    return createWoodPiece(type, color, square, scene)
     default:        return createClassicPiece(type, color, square, scene)
   }
 }
