@@ -83,6 +83,30 @@ const BLACK_MAT = () => new THREE.MeshPhysicalMaterial({
   clearcoatRoughness: 0.05,
 })
 
+function getGlassMat(color) {
+  return new THREE.MeshPhysicalMaterial({
+    color: color === 'white' ? '#B8E8FF' : '#FFD8A0',
+    roughness: 0.05,
+    metalness: 0.0,
+    clearcoat: 1.0,
+    clearcoatRoughness: 0.05,
+    transparent: true,
+    opacity: 0.55,
+    emissive: new THREE.Color(color === 'white' ? '#003366' : '#663300'),
+    emissiveIntensity: 0.3,
+    depthWrite: false,
+  })
+}
+
+function getGlowOutlineMat(color) {
+  return new THREE.MeshBasicMaterial({
+    color: color === 'white' ? '#00AAFF' : '#FF6600',
+    side: THREE.BackSide,
+    transparent: true,
+    opacity: 0.88,
+  })
+}
+
 function getMat(color) {
   return color === 'white' ? WHITE_MAT() : BLACK_MAT()
 }
@@ -418,6 +442,45 @@ function createLowPolyPiece(type, color, square, scene) {
   return group
 }
 
+function createGlassPiece(type, color, square, scene) {
+  const builder = CLASSIC_BUILDERS[type.toLowerCase()]
+  if (!builder) return null
+
+  const group = builder(color)
+  const glassMat = getGlassMat(color)
+  const outlineMat = getGlowOutlineMat(color)
+
+  const meshes = []
+  group.traverse(child => {
+    if (child.isMesh) {
+      if (child.material) {
+        const mats = Array.isArray(child.material) ? child.material : [child.material]
+        mats.forEach(m => m.dispose())
+      }
+      child.material = glassMat
+      meshes.push(child)
+    }
+  })
+
+  meshes.forEach(child => {
+    const outline = new THREE.Mesh(child.geometry, outlineMat)
+    outline.position.copy(child.position)
+    outline.rotation.copy(child.rotation)
+    outline.scale.setScalar(1.08)
+    outline.castShadow = false
+    outline.receiveShadow = false
+    child.parent.add(outline)
+  })
+
+  const pos = squareToWorld(square)
+  group.position.copy(pos)
+  group.userData = { pieceType: type.toLowerCase(), color, square }
+  group.name = `piece_${type}_${color}_${square}`
+
+  scene.add(group)
+  return group
+}
+
 // ─── GLB piece builder ────────────────────────────────────────────────────────
 
 function createGLBPiece(type, color, square, scene) {
@@ -507,6 +570,7 @@ export function createPiece(type, color, square, scene, style = 'classic') {
     case 'retro':   return createRetroPiece(type, color, square, scene)
     case 'symbol':  return createSymbolPiece(type, color, square, scene)
     case 'lowpoly': return createLowPolyPiece(type, color, square, scene)
+    case 'glass':   return createGlassPiece(type, color, square, scene)
     default:        return createClassicPiece(type, color, square, scene)
   }
 }

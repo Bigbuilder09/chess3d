@@ -595,6 +595,7 @@ export default function GameScreen({ setGameResult, playerInfo, settings, setSet
                     { id: 'classic', label: 'Classic',  desc: '3D shapes' },
                     { id: 'symbol',  label: 'Symbol',   desc: '♛ disc' },
                     { id: 'lowpoly', label: 'Low-poly', desc: 'Geometric' },
+                    { id: 'glass',   label: 'Glass',    desc: 'Crystal' },
                   ].map(s => (
                     <button
                       key={s.id}
