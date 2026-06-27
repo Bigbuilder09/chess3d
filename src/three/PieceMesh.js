@@ -619,11 +619,11 @@ function createFunPiece(type, color, square, scene) {
 const OK_SIZE = { p: 0.8, r: 1.3, n: 1.3, b: 1.3, q: 1.3, k: 1.3 }
 
 const OK_WHITE_MAT = () => new THREE.MeshPhysicalMaterial({
-  color: '#003399', roughness: 0.20, metalness: 0.10,
+  color: '#b5e3d8', roughness: 0.20, metalness: 0.10,
   clearcoat: 0.80, clearcoatRoughness: 0.10,
 })
 const OK_BLACK_MAT = () => new THREE.MeshPhysicalMaterial({
-  color: '#800040', roughness: 0.20, metalness: 0.10,
+  color: '#f8c1b8', roughness: 0.20, metalness: 0.10,
   clearcoat: 0.80, clearcoatRoughness: 0.10,
 })
 
