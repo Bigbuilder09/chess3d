@@ -128,7 +128,7 @@ const STEAMPUNK1_SIZE = { r: 1.3, n: 1.3, b: 1.3, q: 1.3, k: 1.3 }
 
 // Copper side (white): warm aged copper
 const STEAMPUNK1_WHITE_MAT = () => new THREE.MeshPhysicalMaterial({
-  color: '#763508', roughness: 0.40, metalness: 0.35,
+  color: '#B06A4F', roughness: 0.40, metalness: 0.35,
   clearcoat: 0.4, clearcoatRoughness: 0.20,
 })
 const STEAMPUNK1_BLACK_MAT = () => new THREE.MeshPhysicalMaterial({
