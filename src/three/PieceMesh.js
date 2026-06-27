@@ -62,6 +62,9 @@ const HI_GLB_MAP = {
 }
 const HI_MODEL_CACHE = {}
 
+// Per-piece scale multipliers for hi set black side (applied after height normalization)
+const HI_BLACK_SIZE = { p: 0.8, r: 1.3, n: 1.3, b: 1.3, q: 1.3, k: 1.3 }
+
 // White side uses the full pink set
 const HI_PINK_GLB_MAP = {
   p: '/models/hi/pink/pawn.glb',
@@ -633,11 +636,12 @@ function createHiPiece(type, color, square, scene) {
     }
   })
 
-  // Normalize height to 1.0
+  // Normalize height to 1.0, then apply per-piece size multiplier for black side
   const box = new THREE.Box3().setFromObject(inner)
   const height = box.max.y - box.min.y
   const normalizedScale = height > 0 ? 1.0 / height : 1
-  inner.scale.setScalar(normalizedScale)
+  const sizeMultiplier = !usePink ? (HI_BLACK_SIZE[t] ?? 1) : 1
+  inner.scale.setScalar(normalizedScale * sizeMultiplier)
 
   // Compute scaled bounding box — models are NOT centered at origin,
   // so we wrap in a pivot group and shift inner so its X/Z center and Y base
