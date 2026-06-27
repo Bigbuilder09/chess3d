@@ -655,6 +655,7 @@ function createHiPiece(type, color, square, scene) {
 
   const pos = squareToWorld(square)
   pivot.position.set(pos.x, 0, pos.z)
+  pivot.rotation.y = color === 'white' ? Math.PI : 0
 
   pivot.userData = { pieceType: type.toLowerCase(), color, square, normalizedScale: 1, baseY: 0 }
   pivot.name = `piece_${type}_${color}_${square}`
