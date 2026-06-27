@@ -141,7 +141,7 @@ const RETRO_WHITE_MAT = () => new THREE.MeshPhysicalMaterial({
   clearcoat: 0.6, clearcoatRoughness: 0.12
 })
 const RETRO_BLACK_MAT = () => new THREE.MeshPhysicalMaterial({
-  color: '#Ce7b69', roughness: 0.10, metalness: 0.92,
+  color: '#Ce7b69', roughness: 0.30, metalness: 0.35,
   clearcoat: 0.5, clearcoatRoughness: 0.08
 })
 
