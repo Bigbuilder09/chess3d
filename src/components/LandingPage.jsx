@@ -346,6 +346,7 @@ export default function LandingPage({ playerInfo, setPlayerInfo, botDifficulty, 
                 { id: 'retro',   label: 'Retro',    desc: '3D retro' },
                 { id: 'fun',     label: 'Fun',      desc: 'Aura glow' },
                 { id: 'hi',      label: 'Hi',       desc: 'Neon glow' },
+                { id: 'ok',      label: 'OK',       desc: 'Hi twins' },
                 { id: 'classic', label: 'Classic',  desc: '3D shapes' },
                 { id: 'symbol',  label: 'Symbol',   desc: '♛ disc' },
                 { id: 'lowpoly', label: 'Low-poly', desc: 'Geometric' },
@@ -354,9 +355,9 @@ export default function LandingPage({ playerInfo, setPlayerInfo, botDifficulty, 
                   key={s.id}
                   onClick={() => {
                     setSettings(prev => ({ ...prev, pieceStyle: s.id }))
-                    if (s.id === 'hi') {
+                    if (s.id === 'hi' || s.id === 'ok') {
                       preloadHiModels().then(() => {
-                        if (sceneRef.current) rebuildPieces(sceneRef.current, pieceMapRef.current, 'hi')
+                        if (sceneRef.current) rebuildPieces(sceneRef.current, pieceMapRef.current, s.id)
                       })
                     }
                   }}

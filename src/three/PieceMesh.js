@@ -613,6 +613,51 @@ function createFunPiece(type, color, square, scene) {
   return group
 }
 
+// ─── OK set piece builder ─────────────────────────────────────────────────────
+// Both sides use the same hi chess models with original colors; pawn only -20%
+
+const OK_SIZE = { p: 0.8 }
+
+function createOkPiece(type, color, square, scene) {
+  const t = type.toLowerCase()
+  const template = HI_MODEL_CACHE[t]
+  if (!template) {
+    preloadHiModels()
+    return createClassicPiece(type, color, square, scene)
+  }
+
+  const inner = template.clone(true)
+  inner.traverse(child => {
+    if (child.isMesh) {
+      child.castShadow = true
+      child.receiveShadow = true
+    }
+  })
+
+  const box = new THREE.Box3().setFromObject(inner)
+  const height = box.max.y - box.min.y
+  const normalizedScale = height > 0 ? 1.0 / height : 1
+  const sizeMultiplier = OK_SIZE[t] ?? 1
+  inner.scale.setScalar(normalizedScale * sizeMultiplier)
+
+  const box2 = new THREE.Box3().setFromObject(inner)
+  const center = box2.getCenter(new THREE.Vector3())
+  inner.position.set(-center.x, -box2.min.y, -center.z)
+
+  const pivot = new THREE.Group()
+  pivot.add(inner)
+
+  const pos = squareToWorld(square)
+  pivot.position.set(pos.x, 0, pos.z)
+  pivot.rotation.y = color === 'white' ? Math.PI : 0
+
+  pivot.userData = { pieceType: t, color, square, normalizedScale: 1, baseY: 0 }
+  pivot.name = `piece_${type}_${color}_${square}`
+
+  scene.add(pivot)
+  return pivot
+}
+
 // ─── Hi set piece builder ─────────────────────────────────────────────────────
 
 function createHiPiece(type, color, square, scene) {
@@ -680,6 +725,7 @@ export function createPiece(type, color, square, scene, style = 'classic') {
     case 'retro':   return createRetroPiece(type, color, square, scene)
     case 'fun':     return createFunPiece(type, color, square, scene)
     case 'hi':      return createHiPiece(type, color, square, scene)
+    case 'ok':      return createOkPiece(type, color, square, scene)
     case 'symbol':  return createSymbolPiece(type, color, square, scene)
     case 'lowpoly': return createLowPolyPiece(type, color, square, scene)
     default:        return createClassicPiece(type, color, square, scene)
