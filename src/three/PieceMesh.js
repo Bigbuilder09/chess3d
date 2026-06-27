@@ -636,11 +636,11 @@ function createHiPiece(type, color, square, scene) {
     }
   })
 
-  // Normalize height to 1.0, then apply per-piece size multiplier for black side
+  // Normalize height to 1.0, then apply per-piece size multiplier
   const box = new THREE.Box3().setFromObject(inner)
   const height = box.max.y - box.min.y
   const normalizedScale = height > 0 ? 1.0 / height : 1
-  const sizeMultiplier = !usePink ? (HI_BLACK_SIZE[t] ?? 1) : 1
+  const sizeMultiplier = usePink ? 1.3 : (HI_BLACK_SIZE[t] ?? 1)
   inner.scale.setScalar(normalizedScale * sizeMultiplier)
 
   // Compute scaled bounding box — models are NOT centered at origin,
