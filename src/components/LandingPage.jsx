@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { createBoard, disposeBoard, updateBoardStyle } from '../three/BoardMesh.js'
-import { createPiece, rebuildPieces, preloadModels } from '../three/PieceMesh.js'
+import { createPiece, rebuildPieces, preloadModels, preloadHiModels } from '../three/PieceMesh.js'
 import { useSocket } from '../hooks/useSocket.js'
 
 export default function LandingPage({ playerInfo, setPlayerInfo, botDifficulty, setBotDifficulty, settings, setSettings }) {
@@ -352,7 +352,7 @@ export default function LandingPage({ playerInfo, setPlayerInfo, botDifficulty, 
               ].map(s => (
                 <button
                   key={s.id}
-                  onClick={() => setSettings(prev => ({ ...prev, pieceStyle: s.id }))}
+                  onClick={() => { if (s.id === 'hi') preloadHiModels(); setSettings(prev => ({ ...prev, pieceStyle: s.id })) }}
                   className={`flex-1 py-2 px-1 rounded text-xs font-inter border transition-all text-center min-w-[44px]
                     ${settings.pieceStyle === s.id
                       ? 'border-gold text-gold bg-charcoal'

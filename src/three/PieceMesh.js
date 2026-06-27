@@ -92,23 +92,34 @@ const HI_WHITE_MAT_B = () => new THREE.MeshPhysicalMaterial({
   emissive: new THREE.Color('#FF0080'), emissiveIntensity: 0.45,
 })
 
+const loadOne = (type, url, cache) =>
+  new Promise((resolve) => {
+    loader.load(
+      url,
+      (gltf) => { cache[type] = gltf.scene; resolve() },
+      undefined,
+      (err) => { console.warn(`Failed to load model ${url}:`, err); resolve() }
+    )
+  })
+
+// Preload lightweight sets at startup (glb + retro + fun)
 export function preloadModels() {
-  const loadOne = (type, url, cache) =>
-    new Promise((resolve) => {
-      loader.load(
-        url,
-        (gltf) => { cache[type] = gltf.scene; resolve() },
-        undefined,
-        (err) => { console.warn(`Failed to load model ${url}:`, err); resolve() }
-      )
-    })
   return Promise.all([
-    ...Object.entries(GLB_MAP).map(([type, url]) => loadOne(type, url, MODEL_CACHE)),
-    ...Object.entries(RETRO_GLB_MAP).map(([type, url]) => loadOne(type, url, RETRO_MODEL_CACHE)),
-    ...Object.entries(FUN_GLB_MAP).map(([type, url]) => loadOne(type, url, FUN_MODEL_CACHE)),
-    ...Object.entries(HI_GLB_MAP).map(([type, url]) => loadOne(type, url, HI_MODEL_CACHE)),
-    ...Object.entries(HI_PINK_GLB_MAP).map(([type, url]) => loadOne(type, url, HI_PINK_MODEL_CACHE)),
+    ...Object.entries(GLB_MAP).map(([t, url]) => loadOne(t, url, MODEL_CACHE)),
+    ...Object.entries(RETRO_GLB_MAP).map(([t, url]) => loadOne(t, url, RETRO_MODEL_CACHE)),
+    ...Object.entries(FUN_GLB_MAP).map(([t, url]) => loadOne(t, url, FUN_MODEL_CACHE)),
   ])
+}
+
+// Lazy-load hi set only when user selects it
+let hiLoadPromise = null
+export function preloadHiModels() {
+  if (hiLoadPromise) return hiLoadPromise
+  hiLoadPromise = Promise.all([
+    ...Object.entries(HI_GLB_MAP).map(([t, url]) => loadOne(t, url, HI_MODEL_CACHE)),
+    ...Object.entries(HI_PINK_GLB_MAP).map(([t, url]) => loadOne(t, url, HI_PINK_MODEL_CACHE)),
+  ])
+  return hiLoadPromise
 }
 
 // Maple vs ebony wood for GLB models
@@ -603,10 +614,14 @@ function createFunPiece(type, color, square, scene) {
 
 function createHiPiece(type, color, square, scene) {
   const t = type.toLowerCase()
-  const usePink = color === 'white' && HI_PINK_MODEL_CACHE[t]
+  const usePink = color === 'white'
   const cache = usePink ? HI_PINK_MODEL_CACHE : HI_MODEL_CACHE
   const template = cache[t]
-  if (!template) return createClassicPiece(type, color, square, scene)
+  // If not loaded yet, trigger lazy load and fall back to classic temporarily
+  if (!template) {
+    preloadHiModels()
+    return createClassicPiece(type, color, square, scene)
+  }
 
   const inner = template.clone(true)
 

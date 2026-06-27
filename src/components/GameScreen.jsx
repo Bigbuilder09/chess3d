@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom'
 import * as THREE from 'three'
 import { initScene, renderScene, disposeScene, getScene, getCamera } from '../three/ChessScene.js'
 import { createBoard, squareToWorld, worldToSquare, highlightSquare, clearAllHighlights, showLegalDots, clearLegalDots, getBoardGroup, updateBoardStyle } from '../three/BoardMesh.js'
-import { createPiece, movePiece, removePiece, selectPiece, deselectPiece, rebuildPieces, preloadModels } from '../three/PieceMesh.js'
+import { createPiece, movePiece, removePiece, selectPiece, deselectPiece, rebuildPieces, preloadModels, preloadHiModels } from '../three/PieceMesh.js'
 import { initControls, updateControls, disposeControls, flipCamera } from '../three/CameraController.js'
 import { playCaptureEffect, playCheckEffect, clearCheckEffect, playCheckmateEffect } from '../three/CaptureEffect.js'
 import { playMoveSound, playCaptureSound, playQueenCaptureSound, playCheckSound, playCheckmateSound, playGameEndSound } from '../audio/sounds.js'
@@ -600,7 +600,7 @@ export default function GameScreen({ setGameResult, playerInfo, settings, setSet
                   ].map(s => (
                     <button
                       key={s.id}
-                      onClick={() => setSettings(prev => ({ ...prev, pieceStyle: s.id }))}
+                      onClick={() => { if (s.id === 'hi') preloadHiModels(); setSettings(prev => ({ ...prev, pieceStyle: s.id })) }}
                       style={{ width: 'calc(33% - 6px)' }}
                       className={`py-2 px-1 rounded text-xs font-inter border transition-all text-center
                         ${settings.pieceStyle === s.id
