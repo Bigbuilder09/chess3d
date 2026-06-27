@@ -51,6 +51,47 @@ const PINK_MAT_FUN   = () => new THREE.MeshPhysicalMaterial({ color: '#D63A6A', 
 const FUN_WHITE_MATS = { p: WHITE_MAT_FUN, b: WHITE_MAT_FUN, q: WHITE_MAT_FUN, k: WHITE_MAT_FUN, r: WHITE_MAT_FUN, n: WHITE_MAT_FUN }
 const FUN_BLACK_MATS = { k: PINK_MAT_FUN, q: PINK_MAT_FUN, b: PINK_MAT_FUN, r: PINK_MAT_FUN }
 
+// ─── Hi set ───────────────────────────────────────────────────────────────────
+const HI_GLB_MAP = {
+  p: '/models/hi/hi_pawn.glb',
+  r: '/models/hi/hi_rook.glb',
+  n: '/models/hi/hi_knight.glb',
+  b: '/models/hi/hi_bishop.glb',
+  q: '/models/hi/hi_queen.glb',
+  k: '/models/hi/hi_king.glb',
+}
+const HI_MODEL_CACHE = {}
+
+// White side uses the full pink set
+const HI_PINK_GLB_MAP = {
+  p: '/models/hi/pink/pawn.glb',
+  r: '/models/hi/pink/rook.glb',
+  n: '/models/hi/pink/knight.glb',
+  b: '/models/hi/pink/bishop.glb',
+  q: '/models/hi/pink/queen.glb',
+  k: '/models/hi/pink/king.glb',
+}
+const HI_PINK_MODEL_CACHE = {}
+
+// Black side: Obsidian Black body + Antique Gold glow
+const HI_BLACK_MAT = () => new THREE.MeshPhysicalMaterial({
+  color: '#1A1A1A', roughness: 0.18, metalness: 0.70,
+  clearcoat: 0.9, clearcoatRoughness: 0.06,
+  emissive: new THREE.Color('#C5A059'), emissiveIntensity: 0.28,
+})
+// White side A: Electric Blue body + cyan glow
+const HI_WHITE_MAT_A = () => new THREE.MeshPhysicalMaterial({
+  color: '#003399', roughness: 0.15, metalness: 0.60,
+  clearcoat: 1.0, clearcoatRoughness: 0.05,
+  emissive: new THREE.Color('#00F2FF'), emissiveIntensity: 0.45,
+})
+// White side B: Magenta Pink body + hot-pink glow
+const HI_WHITE_MAT_B = () => new THREE.MeshPhysicalMaterial({
+  color: '#800040', roughness: 0.15, metalness: 0.60,
+  clearcoat: 1.0, clearcoatRoughness: 0.05,
+  emissive: new THREE.Color('#FF0080'), emissiveIntensity: 0.45,
+})
+
 export function preloadModels() {
   const loadOne = (type, url, cache) =>
     new Promise((resolve) => {
@@ -65,6 +106,8 @@ export function preloadModels() {
     ...Object.entries(GLB_MAP).map(([type, url]) => loadOne(type, url, MODEL_CACHE)),
     ...Object.entries(RETRO_GLB_MAP).map(([type, url]) => loadOne(type, url, RETRO_MODEL_CACHE)),
     ...Object.entries(FUN_GLB_MAP).map(([type, url]) => loadOne(type, url, FUN_MODEL_CACHE)),
+    ...Object.entries(HI_GLB_MAP).map(([type, url]) => loadOne(type, url, HI_MODEL_CACHE)),
+    ...Object.entries(HI_PINK_GLB_MAP).map(([type, url]) => loadOne(type, url, HI_PINK_MODEL_CACHE)),
   ])
 }
 
@@ -556,6 +599,51 @@ function createFunPiece(type, color, square, scene) {
   return group
 }
 
+// ─── Hi set piece builder ─────────────────────────────────────────────────────
+
+function createHiPiece(type, color, square, scene) {
+  const t = type.toLowerCase()
+  const usePink = color === 'white' && HI_PINK_MODEL_CACHE[t]
+  const cache = usePink ? HI_PINK_MODEL_CACHE : HI_MODEL_CACHE
+  const template = cache[t]
+  if (!template) return createClassicPiece(type, color, square, scene)
+
+  const inner = template.clone(true)
+
+  // Both sides — keep original model colors, no override
+  inner.traverse(child => {
+    if (child.isMesh) {
+      child.castShadow = true
+      child.receiveShadow = true
+    }
+  })
+
+  // Normalize height to 1.0
+  const box = new THREE.Box3().setFromObject(inner)
+  const height = box.max.y - box.min.y
+  const normalizedScale = height > 0 ? 1.0 / height : 1
+  inner.scale.setScalar(normalizedScale)
+
+  // Compute scaled bounding box — models are NOT centered at origin,
+  // so we wrap in a pivot group and shift inner so its X/Z center and Y base
+  // align with the pivot's origin. The pivot then sits cleanly on the square.
+  const box2 = new THREE.Box3().setFromObject(inner)
+  const center = box2.getCenter(new THREE.Vector3())
+  inner.position.set(-center.x, -box2.min.y, -center.z)
+
+  const pivot = new THREE.Group()
+  pivot.add(inner)
+
+  const pos = squareToWorld(square)
+  pivot.position.set(pos.x, 0, pos.z)
+
+  pivot.userData = { pieceType: type.toLowerCase(), color, square, normalizedScale: 1, baseY: 0 }
+  pivot.name = `piece_${type}_${color}_${square}`
+
+  scene.add(pivot)
+  return pivot
+}
+
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 /**
@@ -571,6 +659,7 @@ export function createPiece(type, color, square, scene, style = 'classic') {
     case 'glb':     return createGLBPiece(type, color, square, scene)
     case 'retro':   return createRetroPiece(type, color, square, scene)
     case 'fun':     return createFunPiece(type, color, square, scene)
+    case 'hi':      return createHiPiece(type, color, square, scene)
     case 'symbol':  return createSymbolPiece(type, color, square, scene)
     case 'lowpoly': return createLowPolyPiece(type, color, square, scene)
     default:        return createClassicPiece(type, color, square, scene)
