@@ -452,6 +452,7 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
                     { id: 'neon',   label: 'Neon',   color: '#1A4A6A' },
                     { id: 'blush',  label: 'Blush',  color: '#695a5b' },
                     { id: 'dawn',   label: 'Dawn',   color: '#c6cfe0' },
+                    { id: 'pearl',  label: 'Pearl',  color: '#ead7d1' },
                   ].map(b => (
                     <button
                       key={b.id}
