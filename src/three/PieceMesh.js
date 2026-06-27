@@ -616,15 +616,15 @@ function createFunPiece(type, color, square, scene) {
 // ─── OK set piece builder ─────────────────────────────────────────────────────
 // Both sides use the same hi chess models; white = ivory tint, black = obsidian tint
 
-const OK_SIZE = { p: 0.8 }
+const OK_SIZE = { p: 0.8, r: 1.3, n: 1.3, b: 1.3, q: 1.3, k: 1.3 }
 
 const OK_WHITE_MAT = () => new THREE.MeshPhysicalMaterial({
-  color: '#F0EDE0', roughness: 0.20, metalness: 0.05,
+  color: '#003399', roughness: 0.20, metalness: 0.10,
   clearcoat: 0.80, clearcoatRoughness: 0.10,
 })
 const OK_BLACK_MAT = () => new THREE.MeshPhysicalMaterial({
-  color: '#1A1A1A', roughness: 0.25, metalness: 0.15,
-  clearcoat: 0.70, clearcoatRoughness: 0.08,
+  color: '#800040', roughness: 0.20, metalness: 0.10,
+  clearcoat: 0.80, clearcoatRoughness: 0.10,
 })
 
 function createOkPiece(type, color, square, scene) {
