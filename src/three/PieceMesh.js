@@ -764,8 +764,8 @@ function createSteampunk1Piece(type, color, square, scene) {
   const mat = color === 'white' ? STEAMPUNK1_WHITE_MAT() : STEAMPUNK1_BLACK_MAT()
   const inner = template.clone(true)
 
-  // King, queen, bishop models face sideways — rotate -90° so they face the opponent
-  if (t === 'k' || t === 'q' || t === 'b') inner.rotation.y = -Math.PI / 2
+  // King, queen, bishop face backward — rotate 180° so they face the opponent
+  if (t === 'k' || t === 'q' || t === 'b') inner.rotation.y = Math.PI
 
   inner.traverse(child => {
     if (child.isMesh) {
