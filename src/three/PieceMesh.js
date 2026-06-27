@@ -31,6 +31,26 @@ const RETRO_GLB_MAP = {
 
 const RETRO_MODEL_CACHE = {}
 
+// ─── Fun set ──────────────────────────────────────────────────────────────────
+const FUN_GLB_MAP = {
+  pw: '/models/fun/fun_pawn_white.glb',
+  pb: '/models/fun/fun_pawn_black.glb',
+  bw: '/models/fun/fun_bishop_black.glb',
+  bb: '/models/fun/fun_bishop_black.glb',
+  r:  '/models/fun/fun_rook.glb',
+  n:  '/models/fun/fun_knight.glb',
+  q:  '/models/fun/fun_queen.glb',
+  k:  '/models/fun/fun_king.glb',
+}
+const FUN_MODEL_CACHE = {}
+
+const WHITE_MAT_FUN = () => new THREE.MeshPhysicalMaterial({ color: '#EFEFEF', roughness: 0.18, metalness: 0.12, clearcoat: 0.9, clearcoatRoughness: 0.08 })
+const BLACK_MAT_FUN  = () => new THREE.MeshPhysicalMaterial({ color: '#0D0D0D', roughness: 0.22, metalness: 0.50, clearcoat: 0.8, clearcoatRoughness: 0.10 })
+const PINK_MAT_FUN   = () => new THREE.MeshPhysicalMaterial({ color: '#D63A6A', roughness: 0.20, metalness: 0.25, clearcoat: 0.85, clearcoatRoughness: 0.08 })
+
+const FUN_WHITE_MATS = { p: WHITE_MAT_FUN, b: WHITE_MAT_FUN, q: WHITE_MAT_FUN, k: WHITE_MAT_FUN, r: WHITE_MAT_FUN, n: WHITE_MAT_FUN }
+const FUN_BLACK_MATS = { k: PINK_MAT_FUN, q: PINK_MAT_FUN, b: PINK_MAT_FUN, r: PINK_MAT_FUN }
+
 export function preloadModels() {
   const loadOne = (type, url, cache) =>
     new Promise((resolve) => {
@@ -43,7 +63,8 @@ export function preloadModels() {
     })
   return Promise.all([
     ...Object.entries(GLB_MAP).map(([type, url]) => loadOne(type, url, MODEL_CACHE)),
-    ...Object.entries(RETRO_GLB_MAP).map(([type, url]) => loadOne(type, url, RETRO_MODEL_CACHE))
+    ...Object.entries(RETRO_GLB_MAP).map(([type, url]) => loadOne(type, url, RETRO_MODEL_CACHE)),
+    ...Object.entries(FUN_GLB_MAP).map(([type, url]) => loadOne(type, url, FUN_MODEL_CACHE)),
   ])
 }
 
@@ -493,6 +514,47 @@ function createRetroPiece(type, color, square, scene) {
   return group
 }
 
+// ─── Fun set ──────────────────────────────────────────────────────────────────
+
+function createFunPiece(type, color, square, scene) {
+  const t = type.toLowerCase()
+  let cacheKey
+  if (t === 'p') cacheKey = color === 'white' ? 'pw' : 'pb'
+  else if (t === 'b') cacheKey = color === 'white' ? 'bw' : 'bb'
+  else cacheKey = t
+
+  const template = FUN_MODEL_CACHE[cacheKey]
+  if (!template) return createClassicPiece(type, color, square, scene)
+
+  const group = template.clone(true)
+
+  const matFactory = color === 'white' ? FUN_WHITE_MATS[t] : FUN_BLACK_MATS[t]
+  const overrideMat = matFactory ? matFactory() : null
+  group.traverse(child => {
+    if (child.isMesh) {
+      if (overrideMat) child.material = overrideMat
+      child.castShadow = true
+      child.receiveShadow = true
+    }
+  })
+
+  const box = new THREE.Box3().setFromObject(group)
+  const height = box.max.y - box.min.y
+  const normalizedScale = height > 0 ? 1.0 / height : 1
+  group.scale.setScalar(normalizedScale)
+
+  const box2 = new THREE.Box3().setFromObject(group)
+  const baseY = -box2.min.y
+
+  const pos = squareToWorld(square)
+  group.position.set(pos.x, baseY, pos.z)
+  group.userData = { pieceType: t, color, square, normalizedScale, baseY }
+  group.name = `piece_${type}_${color}_${square}`
+
+  scene.add(group)
+  return group
+}
+
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 /**
@@ -507,6 +569,7 @@ export function createPiece(type, color, square, scene, style = 'classic') {
   switch (style) {
     case 'glb':     return createGLBPiece(type, color, square, scene)
     case 'retro':   return createRetroPiece(type, color, square, scene)
+    case 'fun':     return createFunPiece(type, color, square, scene)
     case 'symbol':  return createSymbolPiece(type, color, square, scene)
     case 'lowpoly': return createLowPolyPiece(type, color, square, scene)
     default:        return createClassicPiece(type, color, square, scene)
@@ -549,9 +612,7 @@ export function rebuildPieces(scene, pieceMap, style) {
 export function movePiece(piece, toSquare, duration = 0.4) {
   const target = squareToWorld(toSquare)
   const current = piece.position.clone()
-  // GLB pieces store their base y offset; other styles land at target.y (0)
   const landY = target.y + (piece.userData.baseY || 0)
-
   const dist = current.distanceTo(target)
   const arcHeight = Math.max(0.8, dist * 0.3)
 

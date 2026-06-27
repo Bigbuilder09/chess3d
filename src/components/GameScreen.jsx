@@ -592,6 +592,7 @@ export default function GameScreen({ setGameResult, playerInfo, settings, setSet
                   {[
                     { id: 'glb',     label: 'GLB',      desc: '3D model' },
                     { id: 'retro',   label: 'Retro',    desc: '3D retro' },
+                    { id: 'fun',     label: 'Fun',      desc: 'Aura glow' },
                     { id: 'classic', label: 'Classic',  desc: '3D shapes' },
                     { id: 'symbol',  label: 'Symbol',   desc: '♛ disc' },
                     { id: 'lowpoly', label: 'Low-poly', desc: 'Geometric' },
