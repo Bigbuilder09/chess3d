@@ -124,6 +124,7 @@ const STEAMPUNK1_GLB_MAP = {
   k: '/models/steampunk1/king.glb',
 }
 const STEAMPUNK1_MODEL_CACHE = {}
+const STEAMPUNK1_SIZE = { r: 1.3, n: 1.3, b: 1.3, q: 1.3, k: 1.3 }
 
 let steampunk1LoadPromise = null
 export function preloadSteampunk1Models() {
@@ -761,7 +762,8 @@ function createSteampunk1Piece(type, color, square, scene) {
   const box = new THREE.Box3().setFromObject(inner)
   const height = box.max.y - box.min.y
   const normalizedScale = height > 0 ? 1.0 / height : 1
-  inner.scale.setScalar(normalizedScale)
+  const sizeMultiplier = STEAMPUNK1_SIZE[t] ?? 1
+  inner.scale.setScalar(normalizedScale * sizeMultiplier)
 
   const box2 = new THREE.Box3().setFromObject(inner)
   const center = box2.getCenter(new THREE.Vector3())
