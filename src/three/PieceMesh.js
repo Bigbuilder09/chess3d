@@ -128,15 +128,12 @@ const STEAMPUNK1_SIZE = { r: 1.3, n: 1.3, b: 1.3, q: 1.3, k: 1.3 }
 
 // Copper side (white): warm aged copper
 const STEAMPUNK1_WHITE_MAT = () => new THREE.MeshPhysicalMaterial({
-  color: '#B87333', roughness: 0.40, metalness: 0.35,
+  color: '#B06A4F', roughness: 0.40, metalness: 0.35,
   clearcoat: 0.4, clearcoatRoughness: 0.20,
-  emissive: new THREE.Color('#D9945F'), emissiveIntensity: 0.06,
 })
-// Gunmetal side (black): dark steel
 const STEAMPUNK1_BLACK_MAT = () => new THREE.MeshPhysicalMaterial({
-  color: '#5D686B', roughness: 0.30, metalness: 0.40,
+  color: '#358284', roughness: 0.30, metalness: 0.40,
   clearcoat: 0.5, clearcoatRoughness: 0.10,
-  emissive: new THREE.Color('#8C999B'), emissiveIntensity: 0.04,
 })
 
 let steampunk1LoadPromise = null
