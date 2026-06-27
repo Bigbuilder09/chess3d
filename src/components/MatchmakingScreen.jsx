@@ -29,6 +29,7 @@ export default function MatchmakingScreen({ playerInfo }) {
 
   const animFrameRef = useRef(null)
   const startTimeRef = useRef(Date.now())
+  const cancelledRef = useRef(false)
 
   // Spinning knight canvas
   useEffect(() => {
@@ -104,11 +105,11 @@ export default function MatchmakingScreen({ playerInfo }) {
     emit('join_queue', { playerId, rating, name })
 
     const offMatchFound = on('match_found', (data) => {
-      setMatchFound(data)
+      if (!cancelledRef.current) setMatchFound(data)
     })
 
     const offGameStart = on('game_start', (data) => {
-      setGameData(data)
+      if (!cancelledRef.current) setGameData(data)
     })
 
     return () => {
@@ -151,6 +152,7 @@ export default function MatchmakingScreen({ playerInfo }) {
   }, [gameData, matchFound, navigate, playerInfo])
 
   const handleCancel = () => {
+    cancelledRef.current = true
     emit('leave_queue', { playerId: getOrCreatePlayerId() })
     navigate('/')
   }

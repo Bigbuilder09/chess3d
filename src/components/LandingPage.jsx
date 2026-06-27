@@ -352,7 +352,14 @@ export default function LandingPage({ playerInfo, setPlayerInfo, botDifficulty, 
               ].map(s => (
                 <button
                   key={s.id}
-                  onClick={() => { if (s.id === 'hi') preloadHiModels(); setSettings(prev => ({ ...prev, pieceStyle: s.id })) }}
+                  onClick={() => {
+                    setSettings(prev => ({ ...prev, pieceStyle: s.id }))
+                    if (s.id === 'hi') {
+                      preloadHiModels().then(() => {
+                        if (sceneRef.current) rebuildPieces(sceneRef.current, pieceMapRef.current, 'hi')
+                      })
+                    }
+                  }}
                   className={`flex-1 py-2 px-1 rounded text-xs font-inter border transition-all text-center min-w-[44px]
                     ${settings.pieceStyle === s.id
                       ? 'border-gold text-gold bg-charcoal'

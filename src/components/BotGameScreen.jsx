@@ -423,7 +423,14 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
                   ].map(s => (
                     <button
                       key={s.id}
-                      onClick={() => { if (s.id === 'hi') preloadHiModels(); setSettings(prev => ({ ...prev, pieceStyle: s.id })) }}
+                      onClick={() => {
+                        setSettings(prev => ({ ...prev, pieceStyle: s.id }))
+                        if (s.id === 'hi') {
+                          preloadHiModels().then(() => {
+                            if (sceneRef.current) rebuildPieces(sceneRef.current, pieceMapRef.current, 'hi')
+                          })
+                        }
+                      }}
                       style={{ width: 'calc(33% - 6px)' }}
                       className={`py-2 px-1 rounded text-xs font-inter border transition-all text-center
                         ${settings.pieceStyle === s.id
