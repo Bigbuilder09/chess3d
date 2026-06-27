@@ -33,7 +33,7 @@ const BOARD_STYLES = {
     darkEmissive: null, darkEmissiveIntensity: 0
   },
   pearl: {
-    light: '#fff8e1', dark: '#Deebeb', base: '#8ab8b8',
+    light: '#fff8e1', dark: '#72b0ab', base: '#3d7a75',
     lightRoughness: 0.75, darkRoughness: 0.75,
     lightEmissive: null, lightEmissiveIntensity: 0,
     darkEmissive: null, darkEmissiveIntensity: 0
