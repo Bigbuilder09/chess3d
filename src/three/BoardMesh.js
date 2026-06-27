@@ -19,6 +19,12 @@ const BOARD_STYLES = {
     lightRoughness: 0.8, darkRoughness: 0.8,
     lightEmissive: '#1A4A6A', lightEmissiveIntensity: 0.15,
     darkEmissive: '#0A1E30', darkEmissiveIntensity: 0.08
+  },
+  blush: {
+    light: '#eee4e1', dark: '#695a5b', base: '#3a2c2d',
+    lightRoughness: 0.75, darkRoughness: 0.75,
+    lightEmissive: null, lightEmissiveIntensity: 0,
+    darkEmissive: null, darkEmissiveIntensity: 0
   }
 }
 
