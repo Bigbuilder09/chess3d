@@ -126,6 +126,19 @@ const STEAMPUNK1_GLB_MAP = {
 const STEAMPUNK1_MODEL_CACHE = {}
 const STEAMPUNK1_SIZE = { r: 1.3, n: 1.3, b: 1.3, q: 1.3, k: 1.3 }
 
+// Copper side (white): warm aged copper
+const STEAMPUNK1_WHITE_MAT = () => new THREE.MeshPhysicalMaterial({
+  color: '#B87333', roughness: 0.38, metalness: 0.85,
+  clearcoat: 0.4, clearcoatRoughness: 0.20,
+  emissive: new THREE.Color('#D9945F'), emissiveIntensity: 0.06,
+})
+// Gunmetal side (black): dark steel
+const STEAMPUNK1_BLACK_MAT = () => new THREE.MeshPhysicalMaterial({
+  color: '#5D686B', roughness: 0.25, metalness: 0.90,
+  clearcoat: 0.5, clearcoatRoughness: 0.10,
+  emissive: new THREE.Color('#8C999B'), emissiveIntensity: 0.04,
+})
+
 let steampunk1LoadPromise = null
 export function preloadSteampunk1Models() {
   if (steampunk1LoadPromise) return steampunk1LoadPromise
@@ -751,9 +764,11 @@ function createSteampunk1Piece(type, color, square, scene) {
     return createClassicPiece(type, color, square, scene)
   }
 
+  const mat = color === 'white' ? STEAMPUNK1_WHITE_MAT() : STEAMPUNK1_BLACK_MAT()
   const inner = template.clone(true)
   inner.traverse(child => {
     if (child.isMesh) {
+      child.material = mat
       child.castShadow = true
       child.receiveShadow = true
     }
