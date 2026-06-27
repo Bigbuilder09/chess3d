@@ -114,6 +114,26 @@ export function preloadModels() {
   ])
 }
 
+// ─── Steampunk1 set ───────────────────────────────────────────────────────────
+const STEAMPUNK1_GLB_MAP = {
+  p: '/models/steampunk1/pawn.glb',
+  r: '/models/steampunk1/rook.glb',
+  n: '/models/steampunk1/knight.glb',
+  b: '/models/steampunk1/bishop.glb',
+  q: '/models/steampunk1/queen.glb',
+  k: '/models/steampunk1/king.glb',
+}
+const STEAMPUNK1_MODEL_CACHE = {}
+
+let steampunk1LoadPromise = null
+export function preloadSteampunk1Models() {
+  if (steampunk1LoadPromise) return steampunk1LoadPromise
+  steampunk1LoadPromise = Promise.all(
+    Object.entries(STEAMPUNK1_GLB_MAP).map(([t, url]) => loadOne(t, url, STEAMPUNK1_MODEL_CACHE))
+  )
+  return steampunk1LoadPromise
+}
+
 // Lazy-load hi set only when user selects it
 let hiLoadPromise = null
 export function preloadHiModels() {
@@ -720,6 +740,47 @@ function createHiPiece(type, color, square, scene) {
   return pivot
 }
 
+// ─── Steampunk1 piece builder ─────────────────────────────────────────────────
+
+function createSteampunk1Piece(type, color, square, scene) {
+  const t = type.toLowerCase()
+  const template = STEAMPUNK1_MODEL_CACHE[t]
+  if (!template) {
+    preloadSteampunk1Models()
+    return createClassicPiece(type, color, square, scene)
+  }
+
+  const inner = template.clone(true)
+  inner.traverse(child => {
+    if (child.isMesh) {
+      child.castShadow = true
+      child.receiveShadow = true
+    }
+  })
+
+  const box = new THREE.Box3().setFromObject(inner)
+  const height = box.max.y - box.min.y
+  const normalizedScale = height > 0 ? 1.0 / height : 1
+  inner.scale.setScalar(normalizedScale)
+
+  const box2 = new THREE.Box3().setFromObject(inner)
+  const center = box2.getCenter(new THREE.Vector3())
+  inner.position.set(-center.x, -box2.min.y, -center.z)
+
+  const pivot = new THREE.Group()
+  pivot.add(inner)
+
+  const pos = squareToWorld(square)
+  pivot.position.set(pos.x, 0, pos.z)
+  pivot.rotation.y = color === 'white' ? Math.PI : 0
+
+  pivot.userData = { pieceType: t, color, square, normalizedScale: 1, baseY: 0 }
+  pivot.name = `piece_${type}_${color}_${square}`
+
+  scene.add(pivot)
+  return pivot
+}
+
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 /**
@@ -736,7 +797,8 @@ export function createPiece(type, color, square, scene, style = 'classic') {
     case 'retro':   return createRetroPiece(type, color, square, scene)
     case 'fun':     return createFunPiece(type, color, square, scene)
     case 'hi':      return createHiPiece(type, color, square, scene)
-    case 'ok':      return createOkPiece(type, color, square, scene)
+    case 'ok':         return createOkPiece(type, color, square, scene)
+    case 'steampunk1': return createSteampunk1Piece(type, color, square, scene)
     case 'symbol':  return createSymbolPiece(type, color, square, scene)
     case 'lowpoly': return createLowPolyPiece(type, color, square, scene)
     default:        return createClassicPiece(type, color, square, scene)

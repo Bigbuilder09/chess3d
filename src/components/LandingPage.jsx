@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { createBoard, disposeBoard, updateBoardStyle } from '../three/BoardMesh.js'
-import { createPiece, rebuildPieces, preloadModels, preloadHiModels } from '../three/PieceMesh.js'
+import { createPiece, rebuildPieces, preloadModels, preloadHiModels, preloadSteampunk1Models } from '../three/PieceMesh.js'
 import { useSocket } from '../hooks/useSocket.js'
 
 export default function LandingPage({ playerInfo, setPlayerInfo, botDifficulty, setBotDifficulty, settings, setSettings }) {
@@ -342,14 +342,15 @@ export default function LandingPage({ playerInfo, setPlayerInfo, botDifficulty, 
             <p className="text-ivory font-inter text-xs mb-2">Piece Style</p>
             <div className="flex gap-1.5 mb-4 flex-wrap">
               {[
-                { id: 'glb',     label: 'GLB',      desc: '3D model' },
-                { id: 'retro',   label: 'Retro',    desc: '3D retro' },
-                { id: 'fun',     label: 'Fun',      desc: 'Aura glow' },
-                { id: 'hi',      label: 'Hi',       desc: 'Neon glow' },
-                { id: 'ok',      label: 'OK',       desc: 'Hi twins' },
-                { id: 'classic', label: 'Classic',  desc: '3D shapes' },
-                { id: 'symbol',  label: 'Symbol',   desc: '♛ disc' },
-                { id: 'lowpoly', label: 'Low-poly', desc: 'Geometric' },
+                { id: 'glb',        label: 'GLB',        desc: '3D model' },
+                { id: 'retro',      label: 'Retro',      desc: '3D retro' },
+                { id: 'fun',        label: 'Fun',        desc: 'Aura glow' },
+                { id: 'hi',         label: 'Hi',         desc: 'Neon glow' },
+                { id: 'ok',         label: 'OK',         desc: 'Hi twins' },
+                { id: 'steampunk1', label: 'Steampunk',  desc: 'Steampunk' },
+                { id: 'classic',    label: 'Classic',    desc: '3D shapes' },
+                { id: 'symbol',     label: 'Symbol',     desc: '♛ disc' },
+                { id: 'lowpoly',    label: 'Low-poly',   desc: 'Geometric' },
               ].map(s => (
                 <button
                   key={s.id}
@@ -357,6 +358,10 @@ export default function LandingPage({ playerInfo, setPlayerInfo, botDifficulty, 
                     setSettings(prev => ({ ...prev, pieceStyle: s.id }))
                     if (s.id === 'hi' || s.id === 'ok') {
                       preloadHiModels().then(() => {
+                        if (sceneRef.current) rebuildPieces(sceneRef.current, pieceMapRef.current, s.id)
+                      })
+                    } else if (s.id === 'steampunk1') {
+                      preloadSteampunk1Models().then(() => {
                         if (sceneRef.current) rebuildPieces(sceneRef.current, pieceMapRef.current, s.id)
                       })
                     }

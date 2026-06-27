@@ -4,7 +4,7 @@ import * as THREE from 'three'
 import { Chess } from 'chess.js'
 import { initScene, renderScene, disposeScene } from '../three/ChessScene.js'
 import { createBoard, highlightSquare, clearAllHighlights, showLegalDots, clearLegalDots, getBoardGroup, updateBoardStyle } from '../three/BoardMesh.js'
-import { createPiece, movePiece, removePiece, selectPiece, deselectPiece, rebuildPieces, preloadModels, preloadHiModels } from '../three/PieceMesh.js'
+import { createPiece, movePiece, removePiece, selectPiece, deselectPiece, rebuildPieces, preloadModels, preloadHiModels, preloadSteampunk1Models } from '../three/PieceMesh.js'
 import { initControls, updateControls, disposeControls } from '../three/CameraController.js'
 import { playCaptureEffect, playCheckEffect, clearCheckEffect, playCheckmateEffect } from '../three/CaptureEffect.js'
 import { playMoveSound, playCaptureSound, playQueenCaptureSound, playCheckSound, playCheckmateSound, playGameEndSound } from '../audio/sounds.js'
@@ -413,14 +413,15 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
                 <p className="text-ivory font-inter text-xs mb-2">Piece Style</p>
                 <div className="flex flex-wrap gap-2 mb-3">
                   {[
-                    { id: 'glb',     label: 'GLB',      desc: '3D model' },
-                    { id: 'retro',   label: 'Retro',    desc: '3D retro' },
-                    { id: 'fun',     label: 'Fun',      desc: 'Aura glow' },
-                    { id: 'hi',      label: 'Hi',       desc: 'Neon glow' },
-                    { id: 'ok',      label: 'OK',       desc: 'Hi twins' },
-                    { id: 'classic', label: 'Classic',  desc: '3D shapes' },
-                    { id: 'symbol',  label: 'Symbol',   desc: '♛ disc' },
-                    { id: 'lowpoly', label: 'Low-poly', desc: 'Geometric' },
+                    { id: 'glb',        label: 'GLB',       desc: '3D model' },
+                    { id: 'retro',      label: 'Retro',     desc: '3D retro' },
+                    { id: 'fun',        label: 'Fun',       desc: 'Aura glow' },
+                    { id: 'hi',         label: 'Hi',        desc: 'Neon glow' },
+                    { id: 'ok',         label: 'OK',        desc: 'Hi twins' },
+                    { id: 'steampunk1', label: 'Steampunk', desc: 'Steampunk' },
+                    { id: 'classic',    label: 'Classic',   desc: '3D shapes' },
+                    { id: 'symbol',     label: 'Symbol',    desc: '♛ disc' },
+                    { id: 'lowpoly',    label: 'Low-poly',  desc: 'Geometric' },
                   ].map(s => (
                     <button
                       key={s.id}
@@ -428,6 +429,10 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
                         setSettings(prev => ({ ...prev, pieceStyle: s.id }))
                         if (s.id === 'hi' || s.id === 'ok') {
                           preloadHiModels().then(() => {
+                            if (sceneRef.current) rebuildPieces(sceneRef.current, pieceMapRef.current, s.id)
+                          })
+                        } else if (s.id === 'steampunk1') {
+                          preloadSteampunk1Models().then(() => {
                             if (sceneRef.current) rebuildPieces(sceneRef.current, pieceMapRef.current, s.id)
                           })
                         }
