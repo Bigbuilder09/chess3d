@@ -548,6 +548,7 @@ function createFunPiece(type, color, square, scene) {
 
   const pos = squareToWorld(square)
   group.position.set(pos.x, baseY, pos.z)
+  group.rotation.y = color === 'white' ? Math.PI : 0
   group.userData = { pieceType: t, color, square, normalizedScale, baseY }
   group.name = `piece_${type}_${color}_${square}`
 
