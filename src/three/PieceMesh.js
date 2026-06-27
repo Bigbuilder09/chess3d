@@ -614,9 +614,18 @@ function createFunPiece(type, color, square, scene) {
 }
 
 // ─── OK set piece builder ─────────────────────────────────────────────────────
-// Both sides use the same hi chess models with original colors; pawn only -20%
+// Both sides use the same hi chess models; white = ivory tint, black = obsidian tint
 
 const OK_SIZE = { p: 0.8 }
+
+const OK_WHITE_MAT = () => new THREE.MeshPhysicalMaterial({
+  color: '#F0EDE0', roughness: 0.20, metalness: 0.05,
+  clearcoat: 0.80, clearcoatRoughness: 0.10,
+})
+const OK_BLACK_MAT = () => new THREE.MeshPhysicalMaterial({
+  color: '#1A1A1A', roughness: 0.25, metalness: 0.15,
+  clearcoat: 0.70, clearcoatRoughness: 0.08,
+})
 
 function createOkPiece(type, color, square, scene) {
   const t = type.toLowerCase()
@@ -626,9 +635,11 @@ function createOkPiece(type, color, square, scene) {
     return createClassicPiece(type, color, square, scene)
   }
 
+  const mat = color === 'white' ? OK_WHITE_MAT() : OK_BLACK_MAT()
   const inner = template.clone(true)
   inner.traverse(child => {
     if (child.isMesh) {
+      child.material = mat
       child.castShadow = true
       child.receiveShadow = true
     }
