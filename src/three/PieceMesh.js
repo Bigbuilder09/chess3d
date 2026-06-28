@@ -726,8 +726,8 @@ function createHiPiece(type, color, square, scene) {
 
   const inner = template.clone(true)
 
-  // Pink queen: apply image texture; all others keep original model colors
-  if (usePink && t === 'q' && hiPinkQueenTex) {
+  // Both queens: apply image texture; all other pieces keep original model colors
+  if (t === 'q' && hiPinkQueenTex) {
     const texMat = new THREE.MeshPhysicalMaterial({
       map: hiPinkQueenTex,
       roughness: 0.15,
