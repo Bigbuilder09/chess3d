@@ -554,17 +554,17 @@ export default function GameScreen({ setGameResult, playerInfo, settings, setSet
         className="flex-shrink-0 h-12 flex items-center justify-between px-4"
         style={{ background: '#14141F', borderBottom: '1px solid #2A2A3C' }}
       >
-        <span className="font-cinzel text-gold text-lg tracking-widest">REGICIDE</span>
-        <div className="flex items-center gap-2 text-ash font-mono text-xs">
+        <span className="font-cinzel text-gold text-lg tracking-widest flex-shrink-0">REGICIDE</span>
+        <div className="flex flex-1 min-w-0 justify-center items-center gap-2 text-ash font-mono text-xs">
           <span className={currentTurn === 'white' ? 'text-ivory' : 'text-ash'}>White</span>
           <span className="text-carbon">·</span>
           <span className={currentTurn === 'black' ? 'text-ivory' : 'text-ash'}>Black</span>
-          <span className="text-carbon ml-3">·</span>
-          <span className={`ml-1 ${isMyTurn ? 'text-gold' : 'text-ash'}`}>
+          <span className="text-carbon ml-3 hidden sm:inline">·</span>
+          <span className={`ml-1 hidden sm:inline ${isMyTurn ? 'text-gold' : 'text-ash'}`}>
             {isMyTurn ? 'Your turn' : "Opponent's turn"}
           </span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-shrink-0">
           {/* Settings gear */}
           <div className="relative">
             {settingsOpen && (

@@ -388,19 +388,19 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
     <div className="w-full h-full flex flex-col bg-obsidian overflow-hidden">
       {/* Top bar */}
       <div className="flex-shrink-0 h-12 flex items-center justify-between px-4" style={{ background: '#14141F', borderBottom: '1px solid #2A2A3C' }}>
-        <span className="font-cinzel text-gold text-lg tracking-widest">REGICIDE</span>
-        <div className="flex items-center gap-2 text-ash font-mono text-xs">
+        <span className="font-cinzel text-gold text-lg tracking-widest flex-shrink-0">REGICIDE</span>
+        <div className="flex flex-1 min-w-0 justify-center items-center gap-2 text-ash font-mono text-xs">
           <span className={currentTurn === 'white' ? 'text-ivory' : 'text-ash'}>White</span>
           <span className="text-carbon">·</span>
           <span className={currentTurn === 'black' ? 'text-ivory' : 'text-ash'}>Black</span>
-          <span className="text-carbon ml-3">·</span>
-          <span className={`ml-1 ${isMyTurn ? 'text-gold' : 'text-ash'}`}>
+          <span className="text-carbon ml-3 hidden sm:inline">·</span>
+          <span className={`ml-1 hidden sm:inline ${isMyTurn ? 'text-gold' : 'text-ash'}`}>
             {botThinking ? 'Bot thinking...' : isMyTurn ? 'Your turn' : "Bot's turn"}
           </span>
-          <span className="text-carbon ml-2">·</span>
-          <span className="text-ash ml-1 capitalize">{difficulty}</span>
+          <span className="text-carbon ml-2 hidden sm:inline">·</span>
+          <span className="text-ash ml-1 capitalize hidden sm:inline">{difficulty}</span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-shrink-0">
           {/* Settings gear */}
           <div className="relative">
             {settingsOpen && (

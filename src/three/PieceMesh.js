@@ -167,14 +167,14 @@ export function preloadHiModels() {
   return hiLoadPromise
 }
 
-// Maple vs ebony wood for GLB models
+// Soft silver (white) vs soft gold (black) for GLB models
 const GLB_WHITE_MAT = () => new THREE.MeshPhysicalMaterial({
-  color: '#C8AA78', roughness: 0.72, metalness: 0.0,
-  clearcoat: 0.25, clearcoatRoughness: 0.25
+  color: '#D4D8DC', roughness: 0.18, metalness: 0.88,
+  clearcoat: 0.65, clearcoatRoughness: 0.10
 })
 const GLB_BLACK_MAT = () => new THREE.MeshPhysicalMaterial({
-  color: '#1C1008', roughness: 0.40, metalness: 0.0,
-  clearcoat: 0.65, clearcoatRoughness: 0.10
+  color: '#DEC98A', roughness: 0.22, metalness: 0.72,
+  clearcoat: 0.55, clearcoatRoughness: 0.12
 })
 
 // Crimson vs silver for retro models
