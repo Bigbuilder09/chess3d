@@ -2,7 +2,6 @@ import { Chess } from 'chess.js'
 
 const PIECE_VALUES = { p: 100, n: 320, b: 330, r: 500, q: 900, k: 20000 }
 
-// Piece-square tables for positional bonus (white perspective, index 0=a8, row-major)
 const PST = {
   p: [
      0,  0,  0,  0,  0,  0,  0,  0,
@@ -67,8 +66,8 @@ const PST = {
 }
 
 function squareToIndex(square) {
-  const file = square.charCodeAt(0) - 97   // a=0..h=7
-  const rank = parseInt(square[1]) - 1      // 1=0..8=7
+  const file = square.charCodeAt(0) - 97
+  const rank = parseInt(square[1]) - 1
   return (7 - rank) * 8 + file
 }
 
@@ -85,8 +84,7 @@ function evaluate(chess) {
       const idx = squareToIndex(sq)
       const base = PIECE_VALUES[piece.type] || 0
       const pst = PST[piece.type] ? PST[piece.type][piece.color === 'w' ? idx : 63 - idx] : 0
-      const value = base + pst
-      score += piece.color === 'w' ? value : -value
+      score += piece.color === 'w' ? base + pst : -(base + pst)
     })
   })
   return score
@@ -119,20 +117,19 @@ function minimax(chess, depth, alpha, beta, maximizing) {
   }
 }
 
-export function getBotMove(fen, difficulty) {
+function getBotMove(fen, difficulty) {
   const chess = new Chess(fen)
   const moves = chess.moves()
   if (!moves.length) return null
 
   if (difficulty === 'easy') {
-    // Random move with slight preference for captures
     const captures = moves.filter(m => m.includes('x'))
     return captures.length && Math.random() < 0.6
       ? captures[Math.floor(Math.random() * captures.length)]
       : moves[Math.floor(Math.random() * moves.length)]
   }
 
-  const depth = difficulty === 'hard' ? 3 : 2
+  const depth = difficulty === 'hard' ? 4 : 2
   const isMaximizing = chess.turn() === 'w'
 
   let bestMove = moves[0]
@@ -148,4 +145,9 @@ export function getBotMove(fen, difficulty) {
     }
   }
   return bestMove
+}
+
+self.onmessage = ({ data: { fen, difficulty } }) => {
+  const move = getBotMove(fen, difficulty)
+  self.postMessage({ move })
 }

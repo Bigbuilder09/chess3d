@@ -46,6 +46,7 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
   const isAnimating = useRef(false)
   const botThinkingRef = useRef(false)
   const localChessRef = useRef(new Chess())
+  const workerRef = useRef(null)
   // Keep a ref to latest settings so async callbacks always see current values
   const settingsRef = useRef(settings)
 
@@ -71,6 +72,18 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
   const [botThinking, setBotThinking] = useState(false)
 
   const isMyTurn = currentTurn === myColor && !botThinkingRef.current
+
+  // ── Web Worker init ──────────────────────────────────────────────────────
+  useEffect(() => {
+    try {
+      const w = new Worker(new URL('../ai/botWorker.js', import.meta.url), { type: 'module' })
+      w.onerror = (e) => console.error('[BotWorker] failed to load:', e)
+      workerRef.current = w
+    } catch (e) {
+      console.error('[BotWorker] could not create worker:', e)
+    }
+    return () => workerRef.current?.terminate()
+  }, [])
 
   // ── Three.js init ────────────────────────────────────────────────────────
   useEffect(() => {
@@ -256,9 +269,10 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
     botThinkingRef.current = true
     setBotThinking(true)
 
-    const delay = BOT_DELAY[difficulty] || 900
-    setTimeout(() => {
-      const san = getBotMove(chess.fen(), difficulty)
+    const fen = chess.fen()
+    const worker = workerRef.current
+
+    const finish = (san) => {
       if (!san) { botThinkingRef.current = false; setBotThinking(false); return }
       const moveResult = chess.move(san)
       if (!moveResult) { botThinkingRef.current = false; setBotThinking(false); return }
@@ -266,7 +280,22 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
         botThinkingRef.current = false
         setBotThinking(false)
       })
-    }, delay)
+    }
+
+    const delay = BOT_DELAY[difficulty] || 900
+
+    if (worker) {
+      worker.onmessage = ({ data: { move: san } }) => finish(san)
+      worker.onerror = (e) => {
+        console.error('[BotWorker] runtime error:', e)
+        botThinkingRef.current = false
+        setBotThinking(false)
+      }
+      setTimeout(() => worker.postMessage({ fen, difficulty }), delay)
+    } else {
+      // fallback: run synchronously if worker unavailable
+      setTimeout(() => finish(getBotMove(fen, difficulty)), delay)
+    }
   }, [difficulty, applyMove])
 
   // Watch for bot turn
