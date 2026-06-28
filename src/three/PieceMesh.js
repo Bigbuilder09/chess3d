@@ -26,8 +26,8 @@ const GLB_MAP = {
   r: '/models/rook.glb',
   n: '/models/knight.glb',
   b: '/models/bishop.glb',
-  q: '/models/queen.glb',
-  k: '/models/king.glb'
+  q: '/models/queen_rbg.glb',
+  k: '/models/king_rbg.glb'
 }
 
 // Per-piece scale multipliers for GLB set (applied after height normalization)
