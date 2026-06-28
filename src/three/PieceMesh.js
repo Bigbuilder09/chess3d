@@ -11,6 +11,16 @@ const loader = new GLTFLoader()
 loader.setDRACOLoader(draco)
 const MODEL_CACHE = {}  // type → THREE.Group (template clone)
 
+// ─── Texture cache ────────────────────────────────────────────────────────────
+const texLoader = new THREE.TextureLoader()
+let hiPinkQueenTex = null
+
+export function preloadHiTextures() {
+  if (hiPinkQueenTex) return
+  hiPinkQueenTex = texLoader.load('/textures/queen_pink_texture.png')
+  hiPinkQueenTex.colorSpace = THREE.SRGBColorSpace
+}
+
 const GLB_MAP = {
   p: '/models/pawn.glb',
   r: '/models/rook.glb',
@@ -149,6 +159,7 @@ export function preloadSteampunk1Models() {
 let hiLoadPromise = null
 export function preloadHiModels() {
   if (hiLoadPromise) return hiLoadPromise
+  preloadHiTextures()
   hiLoadPromise = Promise.all([
     ...Object.entries(HI_GLB_MAP).map(([t, url]) => loadOne(t, url, HI_MODEL_CACHE)),
     ...Object.entries(HI_PINK_GLB_MAP).map(([t, url]) => loadOne(t, url, HI_PINK_MODEL_CACHE)),
@@ -715,13 +726,30 @@ function createHiPiece(type, color, square, scene) {
 
   const inner = template.clone(true)
 
-  // Both sides — keep original model colors, no override
-  inner.traverse(child => {
-    if (child.isMesh) {
-      child.castShadow = true
-      child.receiveShadow = true
-    }
-  })
+  // Pink queen: apply image texture; all others keep original model colors
+  if (usePink && t === 'q' && hiPinkQueenTex) {
+    const texMat = new THREE.MeshPhysicalMaterial({
+      map: hiPinkQueenTex,
+      roughness: 0.15,
+      metalness: 0.60,
+      clearcoat: 1.0,
+      clearcoatRoughness: 0.05,
+    })
+    inner.traverse(child => {
+      if (child.isMesh) {
+        child.material = texMat
+        child.castShadow = true
+        child.receiveShadow = true
+      }
+    })
+  } else {
+    inner.traverse(child => {
+      if (child.isMesh) {
+        child.castShadow = true
+        child.receiveShadow = true
+      }
+    })
+  }
 
   // Normalize height to 1.0, then apply per-piece size multiplier
   const box = new THREE.Box3().setFromObject(inner)
