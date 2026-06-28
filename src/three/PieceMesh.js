@@ -22,13 +22,16 @@ export function preloadHiTextures() {
 }
 
 const GLB_MAP = {
-  p: '/models/pawn.glb',
+  p: '/models/pawn_harry.glb',
   r: '/models/rook.glb',
   n: '/models/knight.glb',
   b: '/models/bishop.glb',
   q: '/models/queen.glb',
   k: '/models/king.glb'
 }
+
+// Per-piece scale multipliers for GLB set (applied after height normalization)
+const GLB_SIZE = { k: 1.3, q: 1.3, b: 1.3, n: 1.3 }
 
 const RETRO_GLB_MAP = {
   p: '/models/retro_pawn.glb',
@@ -543,13 +546,14 @@ function createLowPolyPiece(type, color, square, scene) {
 // ─── GLB piece builder ────────────────────────────────────────────────────────
 
 function createGLBPiece(type, color, square, scene) {
-  const template = MODEL_CACHE[type.toLowerCase()]
+  const t = type.toLowerCase()
+  const template = MODEL_CACHE[t]
   if (!template) return createClassicPiece(type, color, square, scene) // fallback
 
-  const group = template.clone(true)
   const mat = color === 'white' ? GLB_WHITE_MAT() : GLB_BLACK_MAT()
+  const inner = template.clone(true)
 
-  group.traverse(child => {
+  inner.traverse(child => {
     if (child.isMesh) {
       child.material = mat
       child.castShadow = true
@@ -557,24 +561,32 @@ function createGLBPiece(type, color, square, scene) {
     }
   })
 
-  // Normalize scale — GLB models vary in size; target bounding box height ~1.0
-  const box = new THREE.Box3().setFromObject(group)
+  // Normalize height to 1.0 then apply per-piece size multiplier
+  const box = new THREE.Box3().setFromObject(inner)
   const height = box.max.y - box.min.y
   const normalizedScale = height > 0 ? 1.0 / height : 1
-  group.scale.setScalar(normalizedScale)
+  const sizeMultiplier = GLB_SIZE[t] ?? 1
+  inner.scale.setScalar(normalizedScale * sizeMultiplier)
 
-  // Align base to y=0 and store offset so movePiece can restore it
-  const box2 = new THREE.Box3().setFromObject(group)
-  const baseY = -box2.min.y
+  // Center X/Z and sit base on Y=0 inside a pivot group
+  const box2 = new THREE.Box3().setFromObject(inner)
+  const center = box2.getCenter(new THREE.Vector3())
+  inner.position.set(-center.x, -box2.min.y, -center.z)
+
+  const pivot = new THREE.Group()
+  pivot.add(inner)
+
+  // White faces black (+Z→-Z), black faces white (-Z→+Z)
+  pivot.rotation.y = color === 'white' ? Math.PI : 0
 
   const pos = squareToWorld(square)
-  group.position.set(pos.x, baseY, pos.z)
+  pivot.position.set(pos.x, 0, pos.z)
 
-  group.userData = { pieceType: type.toLowerCase(), color, square, normalizedScale, baseY }
-  group.name = `piece_${type}_${color}_${square}`
+  pivot.userData = { pieceType: t, color, square, normalizedScale: 1, baseY: 0 }
+  pivot.name = `piece_${type}_${color}_${square}`
 
-  scene.add(group)
-  return group
+  scene.add(pivot)
+  return pivot
 }
 
 // ─── Retro GLB piece builder ──────────────────────────────────────────────────
