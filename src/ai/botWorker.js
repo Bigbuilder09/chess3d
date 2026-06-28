@@ -129,7 +129,7 @@ function getBotMove(fen, difficulty) {
       : moves[Math.floor(Math.random() * moves.length)]
   }
 
-  const depth = difficulty === 'hard' ? 4 : 2
+  const depth = difficulty === 'hard' ? 3 : 2
   const isMaximizing = chess.turn() === 'w'
 
   let bestMove = moves[0]
