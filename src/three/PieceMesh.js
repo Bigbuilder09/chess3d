@@ -34,7 +34,7 @@ const GLB_MAP = {
 const GLB_SIZE = { k: 1.3, q: 1.3, b: 1.3, n: 1.3, p: 0.7 }
 
 // Additional Y rotation per piece type (on top of base facing direction)
-const GLB_EXTRA_ROT = { n: Math.PI, q: Math.PI, b: Math.PI }
+const GLB_EXTRA_ROT = { n: Math.PI, q: Math.PI * 1.5, b: Math.PI * 1.5 }
 
 const RETRO_GLB_MAP = {
   p: '/models/retro_pawn.glb',
