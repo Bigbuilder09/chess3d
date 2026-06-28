@@ -90,10 +90,18 @@ function evaluate(chess) {
   return score
 }
 
+// MVV-LVA: prioritise capturing high-value pieces with low-value attackers
+function orderScore(move) {
+  if (move.captured) return PIECE_VALUES[move.captured] - PIECE_VALUES[move.piece] / 10
+  return 0
+}
+
 function minimax(chess, depth, alpha, beta, maximizing) {
   if (depth === 0 || chess.isGameOver()) return evaluate(chess)
 
-  const moves = chess.moves()
+  const moves = chess.moves({ verbose: true })
+  moves.sort((a, b) => orderScore(b) - orderScore(a))
+
   if (maximizing) {
     let best = -Infinity
     for (const move of moves) {
@@ -119,20 +127,23 @@ function minimax(chess, depth, alpha, beta, maximizing) {
 
 function getBotMove(fen, difficulty) {
   const chess = new Chess(fen)
-  const moves = chess.moves()
+  const moves = chess.moves({ verbose: true })
   if (!moves.length) return null
 
   if (difficulty === 'easy') {
-    const captures = moves.filter(m => m.includes('x'))
-    return captures.length && Math.random() < 0.6
+    const captures = moves.filter(m => m.captured)
+    const pick = captures.length && Math.random() < 0.6
       ? captures[Math.floor(Math.random() * captures.length)]
       : moves[Math.floor(Math.random() * moves.length)]
+    return pick.san
   }
 
-  const depth = difficulty === 'hard' ? 3 : 2
+  const depth = difficulty === 'hard' ? 4 : 2
   const isMaximizing = chess.turn() === 'w'
 
-  let bestMove = moves[0]
+  moves.sort((a, b) => orderScore(b) - orderScore(a))
+
+  let bestMove = moves[0].san
   let bestScore = isMaximizing ? -Infinity : Infinity
 
   for (const move of moves) {
@@ -141,7 +152,7 @@ function getBotMove(fen, difficulty) {
     chess.undo()
     if (isMaximizing ? score > bestScore : score < bestScore) {
       bestScore = score
-      bestMove = move
+      bestMove = move.san
     }
   }
   return bestMove
