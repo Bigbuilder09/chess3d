@@ -262,17 +262,25 @@ export default function LandingPage({ playerInfo, setPlayerInfo, botDifficulty, 
             </div>
 
             {/* Bot difficulty selector */}
-            <div className="flex gap-2 mb-3 w-full">
-              {['easy','medium','hard'].map(d => (
+            <div className="grid grid-cols-3 gap-2 mb-3 w-full">
+              {[
+                { id: 'beginner', label: 'Beginner', elo: 800  },
+                { id: 'casual',   label: 'Casual',   elo: 1000 },
+                { id: 'club',     label: 'Club',     elo: 1300 },
+                { id: 'advanced', label: 'Advanced', elo: 1600 },
+                { id: 'expert',   label: 'Expert',   elo: 1900 },
+                { id: 'master',   label: 'Master',   elo: 2200 },
+              ].map(d => (
                 <button
-                  key={d}
-                  onClick={() => setBotDifficulty(d)}
-                  className={`flex-1 py-1.5 text-xs font-inter rounded capitalize transition-all
-                    ${botDifficulty === d
-                      ? 'bg-charcoal text-ivory border border-carbon'
-                      : 'text-ash border border-carbon hover:text-ivory'}`}
+                  key={d.id}
+                  onClick={() => setBotDifficulty(d.id)}
+                  className={`py-2 text-xs font-inter rounded transition-all
+                    ${botDifficulty === d.id
+                      ? 'bg-charcoal text-ivory border border-gold'
+                      : 'text-ash border border-carbon hover:text-ivory hover:border-ash'}`}
                 >
-                  {d}
+                  <div>{d.label}</div>
+                  <div className="opacity-40 mt-0.5">{d.elo}</div>
                 </button>
               ))}
             </div>

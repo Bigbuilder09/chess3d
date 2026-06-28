@@ -1,7 +1,14 @@
 import { useRef, useEffect, useCallback } from 'react'
 
-const SKILL    = { easy: 2, medium: 10, hard: 20 }
-const MOVETIME = { easy: 300, medium: 800, hard: 1500 }
+const SKILL = {
+  beginner: 0, casual: 4, club: 8, advanced: 12, expert: 16, master: 20,
+  // legacy keys
+  easy: 2, medium: 10, hard: 20
+}
+const MOVETIME = {
+  beginner: 100, casual: 300, club: 500, advanced: 800, expert: 1200, master: 2000,
+  easy: 300, medium: 800, hard: 1500
+}
 
 export function useStockfish() {
   const sfRef      = useRef(null)

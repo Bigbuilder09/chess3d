@@ -503,7 +503,7 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
              style={{ background: '#14141F', borderBottom: '1px solid #2A2A3C' }}>
           <PlayerPanel
             name={`Bot (${difficulty})`}
-            rating={{ easy: 800, medium: 1400, hard: 2000 }[difficulty]}
+            rating={{ beginner: 800, casual: 1000, club: 1300, advanced: 1600, expert: 1900, master: 2200 }[difficulty] ?? 1200}
             timeMs={botTimeMs}
             isActive={currentTurn === botColor}
             isInCheck={isCheck && currentTurn === botColor}
@@ -522,7 +522,7 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
         <div className="hidden md:flex flex-col justify-between py-3 px-2 flex-shrink-0" style={{ width: 220, borderRight: '1px solid #2A2A3C', background: '#14141F' }}>
           <PlayerPanel
             name={`Bot (${difficulty})`}
-            rating={{ easy: 800, medium: 1400, hard: 2000 }[difficulty]}
+            rating={{ beginner: 800, casual: 1000, club: 1300, advanced: 1600, expert: 1900, master: 2200 }[difficulty] ?? 1200}
             timeMs={botTimeMs}
             isActive={currentTurn === botColor}
             isInCheck={isCheck && currentTurn === botColor}
