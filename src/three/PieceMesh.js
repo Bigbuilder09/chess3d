@@ -31,7 +31,10 @@ const GLB_MAP = {
 }
 
 // Per-piece scale multipliers for GLB set (applied after height normalization)
-const GLB_SIZE = { k: 1.3, q: 1.3, b: 1.3, n: 1.3 }
+const GLB_SIZE = { k: 1.3, q: 1.3, b: 1.3, n: 1.3, p: 0.7 }
+
+// Additional Y rotation per piece type (on top of base facing direction)
+const GLB_EXTRA_ROT = { n: Math.PI, q: Math.PI / 2, b: Math.PI / 2 }
 
 const RETRO_GLB_MAP = {
   p: '/models/retro_pawn.glb',
@@ -576,8 +579,8 @@ function createGLBPiece(type, color, square, scene) {
   const pivot = new THREE.Group()
   pivot.add(inner)
 
-  // White faces black (+Z→-Z), black faces white (-Z→+Z)
-  pivot.rotation.y = color === 'white' ? Math.PI : 0
+  // White faces black (+Z→-Z), black faces white (-Z→+Z); extra rot per piece type
+  pivot.rotation.y = (color === 'white' ? Math.PI : 0) + (GLB_EXTRA_ROT[t] ?? 0)
 
   const pos = squareToWorld(square)
   pivot.position.set(pos.x, 0, pos.z)
