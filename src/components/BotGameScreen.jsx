@@ -8,6 +8,7 @@ import { createPiece, movePiece, removePiece, selectPiece, deselectPiece, rebuil
 import { initControls, updateControls, disposeControls } from '../three/CameraController.js'
 import { playCaptureEffect, playCheckEffect, clearCheckEffect, playCheckmateEffect } from '../three/CaptureEffect.js'
 import { playMoveSound, playCaptureSound, playQueenCaptureSound, playCheckSound, playCheckmateSound, playGameEndSound } from '../audio/sounds.js'
+import { useStockfish } from '../ai/useStockfish.js'
 import { getBotMove } from '../ai/BotEngine.js'
 import { useChessGame } from '../hooks/useChessGame.js'
 import PlayerPanel from './PlayerPanel.jsx'
@@ -46,7 +47,7 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
   const isAnimating = useRef(false)
   const botThinkingRef = useRef(false)
   const localChessRef = useRef(new Chess())
-  const workerRef = useRef(null)
+  const { getMove } = useStockfish()
   // Keep a ref to latest settings so async callbacks always see current values
   const settingsRef = useRef(settings)
 
@@ -72,18 +73,6 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
   const [botThinking, setBotThinking] = useState(false)
 
   const isMyTurn = currentTurn === myColor && !botThinkingRef.current
-
-  // ── Web Worker init ──────────────────────────────────────────────────────
-  useEffect(() => {
-    try {
-      const w = new Worker(new URL('../ai/botWorker.js', import.meta.url), { type: 'module' })
-      w.onerror = (e) => console.error('[BotWorker] failed to load:', e)
-      workerRef.current = w
-    } catch (e) {
-      console.error('[BotWorker] could not create worker:', e)
-    }
-    return () => workerRef.current?.terminate()
-  }, [])
 
   // ── Three.js init ────────────────────────────────────────────────────────
   useEffect(() => {
@@ -270,33 +259,28 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
     setBotThinking(true)
 
     const fen = chess.fen()
-    const worker = workerRef.current
 
-    const finish = (san) => {
-      if (!san) { botThinkingRef.current = false; setBotThinking(false); return }
-      const moveResult = chess.move(san)
+    const run = async () => {
+      // getMove returns UCI format e.g. "e2e4" or "e7e8q"
+      const uciMove = await getMove(fen, difficulty).catch(() => null)
+        ?? getBotMove(fen, difficulty)  // fallback to local minimax if Stockfish fails
+
+      if (!uciMove) { botThinkingRef.current = false; setBotThinking(false); return }
+
+      const moveObj = uciMove.length === 4 || uciMove.length === 5
+        ? { from: uciMove.slice(0, 2), to: uciMove.slice(2, 4), ...(uciMove[4] && { promotion: uciMove[4] }) }
+        : uciMove  // fallback minimax returns SAN
+
+      const moveResult = chess.move(moveObj)
       if (!moveResult) { botThinkingRef.current = false; setBotThinking(false); return }
-      applyMove(moveResult).then(() => {
-        botThinkingRef.current = false
-        setBotThinking(false)
-      })
+
+      await applyMove(moveResult)
+      botThinkingRef.current = false
+      setBotThinking(false)
     }
 
-    const delay = BOT_DELAY[difficulty] || 900
-
-    if (worker) {
-      worker.onmessage = ({ data: { move: san } }) => finish(san)
-      worker.onerror = (e) => {
-        console.error('[BotWorker] runtime error:', e)
-        botThinkingRef.current = false
-        setBotThinking(false)
-      }
-      setTimeout(() => worker.postMessage({ fen, difficulty }), delay)
-    } else {
-      // fallback: run synchronously if worker unavailable
-      setTimeout(() => finish(getBotMove(fen, difficulty)), delay)
-    }
-  }, [difficulty, applyMove])
+    setTimeout(run, 300)
+  }, [difficulty, applyMove, getMove])
 
   // Watch for bot turn
   useEffect(() => {
