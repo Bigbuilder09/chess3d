@@ -728,12 +728,8 @@ function createHiPiece(type, color, square, scene) {
 
   // Both queens: apply image texture; all other pieces keep original model colors
   if (t === 'q' && hiPinkQueenTex) {
-    const texMat = new THREE.MeshPhysicalMaterial({
-      map: hiPinkQueenTex,
-      roughness: 0.15,
-      metalness: 0.60,
-      clearcoat: 1.0,
-      clearcoatRoughness: 0.05,
+    const texMat = new THREE.MeshMatcapMaterial({
+      matcap: hiPinkQueenTex,
     })
     inner.traverse(child => {
       if (child.isMesh) {
