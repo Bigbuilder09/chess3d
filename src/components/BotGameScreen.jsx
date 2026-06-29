@@ -69,6 +69,7 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
   const [myTimeMs, setMyTimeMs] = useState(INITIAL_TIME)
   const [botTimeMs, setBotTimeMs] = useState(INITIAL_TIME)
   const [currentTurn, setCurrentTurn] = useState('white')
+  const timerRef = useRef(null)
   const [promotionPending, setPromotionPending] = useState(null)
   const [botThinking, setBotThinking] = useState(false)
 
@@ -377,6 +378,43 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
     setPromotionPending(null)
   }
 
+  // ── Chess clock ──────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (timerRef.current) clearInterval(timerRef.current)
+    if (gameOver) return
+
+    const isMyTurnNow = currentTurn === myColor
+    if (isMyTurnNow) {
+      timerRef.current = setInterval(() => {
+        setMyTimeMs(prev => {
+          const next = Math.max(0, prev - 100)
+          if (next <= 0) {
+            clearInterval(timerRef.current)
+            setGameOver({ winner: botColor, reason: 'timeout' })
+            playGameEndSound('lose')
+            setTimeout(() => navigate('/'), 3000)
+          }
+          return next
+        })
+      }, 100)
+    } else {
+      timerRef.current = setInterval(() => {
+        setBotTimeMs(prev => {
+          const next = Math.max(0, prev - 100)
+          if (next <= 0) {
+            clearInterval(timerRef.current)
+            setGameOver({ winner: myColor, reason: 'timeout' })
+            playGameEndSound('win')
+            setTimeout(() => navigate('/'), 3000)
+          }
+          return next
+        })
+      }, 100)
+    }
+
+    return () => clearInterval(timerRef.current)
+  }, [currentTurn, gameOver]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // ── Resign ────────────────────────────────────────────────────────────────
   const handleBotResign = () => {
     setGameOver({ winner: botColor, reason: 'resignation' })
@@ -509,12 +547,6 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
             isInCheck={isCheck && currentTurn === botColor}
             captures={capturedPieces[botColor] || []}
             color={botColor}
-            onTick={t => setBotTimeMs(t)}
-            onTimeout={() => {
-              setGameOver({ winner: myColor, reason: 'timeout' })
-              playGameEndSound('win')
-              setTimeout(() => navigate('/'), 3000)
-            }}
             compact
           />
         </div>
@@ -528,12 +560,6 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
             isInCheck={isCheck && currentTurn === botColor}
             captures={capturedPieces[botColor] || []}
             color={botColor}
-            onTick={t => setBotTimeMs(t)}
-            onTimeout={() => {
-              setGameOver({ winner: myColor, reason: 'timeout' })
-              playGameEndSound('win')
-              setTimeout(() => navigate('/'), 3000)
-            }}
           />
           <div className="flex-1" />
           <PlayerPanel
@@ -544,12 +570,6 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
             isInCheck={isCheck && currentTurn === myColor}
             captures={capturedPieces[myColor] || []}
             color={myColor}
-            onTick={t => setMyTimeMs(t)}
-            onTimeout={() => {
-              setGameOver({ winner: botColor, reason: 'timeout' })
-              playGameEndSound('lose')
-              setTimeout(() => navigate('/'), 3000)
-            }}
           />
         </div>
 
@@ -615,12 +635,6 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
             isInCheck={isCheck && currentTurn === myColor}
             captures={capturedPieces[myColor] || []}
             color={myColor}
-            onTick={t => setMyTimeMs(t)}
-            onTimeout={() => {
-              setGameOver({ winner: botColor, reason: 'timeout' })
-              playGameEndSound('lose')
-              setTimeout(() => navigate('/'), 3000)
-            }}
             compact
           />
           <div className="flex gap-2">

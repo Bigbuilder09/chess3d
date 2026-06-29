@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React from 'react'
 
 const PIECE_SYMBOLS = {
   p: '♟', r: '♜', n: '♞', b: '♝', q: '♛', k: '♚'
@@ -19,41 +19,9 @@ export default function PlayerPanel({
   isInCheck,
   captures = [],
   color,
-  onTick,
-  onTimeout
 }) {
-  const intervalRef = useRef(null)
-  const [displayTime, setDisplayTime] = useState(timeMs)
-  const timeRef = useRef(timeMs)
-
-  // Sync external timeMs changes
-  useEffect(() => {
-    timeRef.current = timeMs
-    setDisplayTime(timeMs)
-  }, [timeMs])
-
-  // Countdown tick
-  useEffect(() => {
-    if (intervalRef.current) clearInterval(intervalRef.current)
-
-    if (isActive && displayTime > 0) {
-      intervalRef.current = setInterval(() => {
-        timeRef.current = Math.max(0, timeRef.current - 100)
-        setDisplayTime(timeRef.current)
-        onTick?.(timeRef.current)
-        // M6: Notify parent when clock reaches zero
-        if (timeRef.current <= 0) {
-          clearInterval(intervalRef.current)
-          onTimeout?.()
-        }
-      }, 100)
-    }
-
-    return () => clearInterval(intervalRef.current)
-  }, [isActive]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  const isLowTime = displayTime < 60000  // < 60s
-  const isCritical = displayTime < 10000 // < 10s
+  const isLowTime = timeMs < 60000  // < 60s
+  const isCritical = timeMs < 10000 // < 10s
 
   const borderColor = isInCheck
     ? '#E84040'
@@ -118,7 +86,7 @@ export default function PlayerPanel({
           textAlign: 'right'
         }}
       >
-        {formatTime(displayTime)}
+        {formatTime(timeMs)}
       </div>
     </div>
   )

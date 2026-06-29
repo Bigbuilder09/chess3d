@@ -103,6 +103,7 @@ export default function GameScreen({ setGameResult, playerInfo, settings, setSet
   const [myTimeMs,  setMyTimeMs]  = useState(INITIAL_TIME)
   const [oppTimeMs, setOppTimeMs] = useState(INITIAL_TIME)
   const [currentTurn, setCurrentTurn] = useState('white') // whose turn
+  const timerRef = useRef(null)
   const [drawOffered, setDrawOffered] = useState(false)
   const [myDrawOfferSent, setMyDrawOfferSent] = useState(false)
   const [isBoardFlipped, setIsBoardFlipped] = useState(myColor === 'black')
@@ -503,6 +504,31 @@ export default function GameScreen({ setGameResult, playerInfo, settings, setSet
     }
   }
 
+  // ─── Chess clock ─────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (timerRef.current) clearInterval(timerRef.current)
+    if (gameOver) return
+
+    if (isMyTurn) {
+      timerRef.current = setInterval(() => {
+        setMyTimeMs(prev => {
+          const next = Math.max(0, prev - 100)
+          if (next <= 0) {
+            clearInterval(timerRef.current)
+            emit('timeout', { gameId, playerId })
+          }
+          return next
+        })
+      }, 100)
+    } else {
+      timerRef.current = setInterval(() => {
+        setOppTimeMs(prev => Math.max(0, prev - 100))
+      }, 100)
+    }
+
+    return () => clearInterval(timerRef.current)
+  }, [isMyTurn, gameOver]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // ─── Resign / Draw ───────────────────────────────────────────────────────────
   const handleResign = () => {
     emit('resign', { gameId, playerId })
@@ -532,8 +558,6 @@ export default function GameScreen({ setGameResult, playerInfo, settings, setSet
     isInCheck: isCheck && currentTurn === myColor,
     captures: capturedPieces[myColor] || [],
     color: myColor,
-    onTick: (t) => setMyTimeMs(t),
-    onTimeout: () => emit('timeout', { gameId, playerId })
   }
 
   const oppPanelProps = {
@@ -544,7 +568,6 @@ export default function GameScreen({ setGameResult, playerInfo, settings, setSet
     isInCheck: isCheck && currentTurn !== myColor,
     captures: capturedPieces[myColor === 'white' ? 'black' : 'white'] || [],
     color: myColor === 'white' ? 'black' : 'white',
-    onTick: (t) => setOppTimeMs(t)
   }
 
   return (
