@@ -8,7 +8,7 @@ const activeGames = {}
  * Add a player to the matchmaking queue.
  * Returns a match object if a suitable opponent was found, otherwise null.
  */
-export function joinQueue(playerId, rating, name, socketId) {
+export function joinQueue(playerId, rating, name, socketId, preferredColor) {
   // M7: Reject if the player is already in an active game
   const alreadyInGame = Object.values(activeGames).some(
     g => g.white.playerId === playerId || g.black.playerId === playerId
@@ -20,7 +20,7 @@ export function joinQueue(playerId, rating, name, socketId) {
   if (existingIdx !== -1) matchmakingQueue.splice(existingIdx, 1)
 
   const joinedAt = Date.now()
-  matchmakingQueue.push({ playerId, rating, name, socketId, joinedAt })
+  matchmakingQueue.push({ playerId, rating, name, socketId, joinedAt, preferredColor })
 
   return tryMatch(playerId, rating, joinedAt)
 }
@@ -55,8 +55,19 @@ function tryMatch(playerId, rating, joinedAt) {
       matchmakingQueue.splice(Math.min(myIdx, i), 1)
 
       const gameId = uuidv4()
-      const whitePlayer = Math.random() < 0.5 ? me : candidate
-      const blackPlayer = whitePlayer === me ? candidate : me
+      let whitePlayer, blackPlayer
+      if (me.preferredColor === 'white' && candidate.preferredColor !== 'white') {
+        whitePlayer = me; blackPlayer = candidate
+      } else if (me.preferredColor === 'black' && candidate.preferredColor !== 'black') {
+        whitePlayer = candidate; blackPlayer = me
+      } else if (candidate.preferredColor === 'white' && me.preferredColor !== 'white') {
+        whitePlayer = candidate; blackPlayer = me
+      } else if (candidate.preferredColor === 'black' && me.preferredColor !== 'black') {
+        whitePlayer = me; blackPlayer = candidate
+      } else {
+        whitePlayer = Math.random() < 0.5 ? me : candidate
+        blackPlayer = whitePlayer === me ? candidate : me
+      }
 
       const game = {
         gameId,
@@ -99,8 +110,19 @@ export function scanQueue(io) {
         i--
 
         const gameId = uuidv4()
-        const whitePlayer = Math.random() < 0.5 ? player : candidate
-        const blackPlayer = whitePlayer === player ? candidate : player
+        let whitePlayer, blackPlayer
+        if (player.preferredColor === 'white' && candidate.preferredColor !== 'white') {
+          whitePlayer = player; blackPlayer = candidate
+        } else if (player.preferredColor === 'black' && candidate.preferredColor !== 'black') {
+          whitePlayer = candidate; blackPlayer = player
+        } else if (candidate.preferredColor === 'white' && player.preferredColor !== 'white') {
+          whitePlayer = candidate; blackPlayer = player
+        } else if (candidate.preferredColor === 'black' && player.preferredColor !== 'black') {
+          whitePlayer = player; blackPlayer = candidate
+        } else {
+          whitePlayer = Math.random() < 0.5 ? player : candidate
+          blackPlayer = whitePlayer === player ? candidate : player
+        }
 
         const game = {
           gameId,

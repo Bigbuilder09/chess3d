@@ -343,6 +343,7 @@ export default function GameScreen({ setGameResult, playerInfo, settings, setSet
     setGameOver(go)
     setMyDrawOfferSent(false)
     setDrawOffered(false)
+    sessionStorage.setItem('last_color', myColor)
     const outcome =
       go.winner === myColor ? 'win' :
       go.winner === null    ? 'draw' :

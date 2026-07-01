@@ -43,9 +43,9 @@ io.on('connection', (socket) => {
   console.log(`[CONNECT] socket=${socket.id} total=${onlinePlayers}`)
 
   // --- MATCHMAKING ---
-  socket.on('join_queue', ({ playerId, rating, name }) => {
-    console.log(`[QUEUE] ${name} (${rating}) joined queue`)
-    const match = joinQueue(playerId, rating || 1200, name || 'Guest', socket.id)
+  socket.on('join_queue', ({ playerId, rating, name, preferredColor }) => {
+    console.log(`[QUEUE] ${name} (${rating}) joined queue preferredColor=${preferredColor}`)
+    const match = joinQueue(playerId, rating || 1200, name || 'Guest', socket.id, preferredColor)
 
     if (match) {
       const { gameId, white, black } = match

@@ -102,7 +102,9 @@ export default function MatchmakingScreen({ playerInfo }) {
     const name = playerInfo.name || 'Guest'
     const rating = playerInfo.rating || 1200
 
-    emit('join_queue', { playerId, rating, name })
+    const lastColor = sessionStorage.getItem('last_color')
+    const preferredColor = lastColor === 'white' ? 'black' : lastColor === 'black' ? 'white' : null
+    emit('join_queue', { playerId, rating, name, preferredColor })
 
     const offMatchFound = on('match_found', (data) => {
       if (!cancelledRef.current) setMatchFound(data)
