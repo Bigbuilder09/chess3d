@@ -13,7 +13,10 @@ export function joinQueue(playerId, rating, name, socketId, preferredColor) {
   const alreadyInGame = Object.values(activeGames).some(
     g => g.white.playerId === playerId || g.black.playerId === playerId
   )
-  if (alreadyInGame) return null
+  if (alreadyInGame) {
+    console.log(`[QUEUE REJECTED] ${name} (${playerId}) already in active game`)
+    return null
+  }
 
   // Remove any existing entry for this player
   const existingIdx = matchmakingQueue.findIndex(p => p.playerId === playerId)
@@ -21,6 +24,7 @@ export function joinQueue(playerId, rating, name, socketId, preferredColor) {
 
   const joinedAt = Date.now()
   matchmakingQueue.push({ playerId, rating, name, socketId, joinedAt, preferredColor })
+  console.log(`[QUEUE SIZE] ${matchmakingQueue.length} player(s) waiting`)
 
   return tryMatch(playerId, rating, joinedAt)
 }
