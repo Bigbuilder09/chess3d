@@ -42,6 +42,11 @@ io.on('connection', (socket) => {
   io.emit('online_count', onlinePlayers)
   console.log(`[CONNECT] socket=${socket.id} total=${onlinePlayers}`)
 
+  // --- ONLINE COUNT ---
+  socket.on('get_online_count', () => {
+    socket.emit('online_count', onlinePlayers)
+  })
+
   // --- MATCHMAKING ---
   socket.on('join_queue', ({ playerId, rating, name, preferredColor }) => {
     console.log(`[QUEUE] ${name} (${rating}) joined queue preferredColor=${preferredColor}`)
