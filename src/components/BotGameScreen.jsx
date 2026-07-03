@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import * as THREE from 'three'
 import { Chess } from 'chess.js'
-import { initScene, renderScene, disposeScene, markDirty, shouldRender } from '../three/ChessScene.js'
+import { initScene, renderScene, disposeScene, markDirty, shouldRender, setSceneBg } from '../three/ChessScene.js'
 import { createBoard, highlightSquare, clearAllHighlights, showLegalDots, clearLegalDots, getBoardGroup, updateBoardStyle } from '../three/BoardMesh.js'
 import { createPiece, movePiece, removePiece, selectPiece, deselectPiece, rebuildPieces, preloadModels, preloadHiModels, updateRGBPieces, clearRGBRegistry } from '../three/PieceMesh.js'
 import { initControls, updateControls, disposeControls } from '../three/CameraController.js'
@@ -146,6 +146,11 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
     rebuildPieces(sceneRef.current, pieceMapRef.current, settings.pieceStyle)
     markDirty()
   }, [settings.pieceStyle])
+
+  // ── Live BG image update ─────────────────────────────────────────────────
+  useEffect(() => {
+    setSceneBg(settings.bgImage ?? null)
+  }, [settings.bgImage])
 
   // ── Apply a move (shared between player and bot) ─────────────────────────
   const applyMove = useCallback(async (moveResult) => {
@@ -444,12 +449,7 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
   }
 
   return (
-    <div
-      className="w-full h-full flex flex-col overflow-hidden"
-      style={settings.bgImage
-        ? { backgroundImage: `url(${settings.bgImage})`, backgroundSize: 'cover', backgroundPosition: 'center' }
-        : { background: '#06031A' }}
-    >
+    <div className="w-full h-full flex flex-col bg-obsidian overflow-hidden">
       {/* Top bar */}
       <div className="flex-shrink-0 h-12 flex items-center justify-between px-4" style={{ background: '#14141F', borderBottom: '1px solid #2A2A3C' }}>
         <span className="font-cinzel text-gold text-lg tracking-widest flex-shrink-0">REGICIDE</span>

@@ -3,7 +3,7 @@ import React, {
 } from 'react'
 import { useNavigate } from 'react-router-dom'
 import * as THREE from 'three'
-import { initScene, renderScene, disposeScene, getScene, getCamera, markDirty, shouldRender } from '../three/ChessScene.js'
+import { initScene, renderScene, disposeScene, getScene, getCamera, markDirty, shouldRender, setSceneBg } from '../three/ChessScene.js'
 import { createBoard, squareToWorld, worldToSquare, highlightSquare, clearAllHighlights, showLegalDots, clearLegalDots, getBoardGroup, updateBoardStyle } from '../three/BoardMesh.js'
 import { createPiece, movePiece, removePiece, selectPiece, deselectPiece, rebuildPieces, buildPiecesFromBoard, clearAllPieces, preloadModels, preloadHiModels, updateRGBPieces, clearRGBRegistry } from '../three/PieceMesh.js'
 import { initControls, updateControls, disposeControls, flipCamera } from '../three/CameraController.js'
@@ -194,6 +194,11 @@ export default function GameScreen({ setGameResult, playerInfo, settings, setSet
     rebuildPieces(sceneRef.current, pieceMapRef.current, settings.pieceStyle)
     markDirty()
   }, [settings.pieceStyle])
+
+  // ─── Live BG image update ────────────────────────────────────────────────────
+  useEffect(() => {
+    setSceneBg(settings.bgImage ?? null)
+  }, [settings.bgImage])
 
   // ─── Socket event listeners ──────────────────────────────────────────────────
   useEffect(() => {
@@ -621,12 +626,7 @@ export default function GameScreen({ setGameResult, playerInfo, settings, setSet
   }
 
   return (
-    <div
-      className="w-full h-full flex flex-col overflow-hidden"
-      style={settings.bgImage
-        ? { backgroundImage: `url(${settings.bgImage})`, backgroundSize: 'cover', backgroundPosition: 'center' }
-        : { background: '#06031A' }}
-    >
+    <div className="w-full h-full flex flex-col bg-obsidian overflow-hidden">
       {/* Top bar */}
       <div
         className="flex-shrink-0 h-12 flex items-center justify-between px-4"
