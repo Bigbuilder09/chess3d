@@ -727,10 +727,8 @@ export default function GameScreen({ setGameResult, playerInfo, settings, setSet
                 <p className="text-ivory font-inter text-xs mt-3 mb-2">Background</p>
                 <div className="flex gap-2">
                   {[
-                    { id: null,                    label: 'None' },
-                    { id: '/bg/ball-room.jpg',     label: 'Ballroom' },
-                    { id: '/bg/stage-a.jpg',       label: 'Stage' },
-                    { id: '/bg/golden-smoke.jpg',  label: 'Nebula' },
+                    { id: null,                   label: 'None' },
+                    { id: '/bg/golden-smoke.jpg', label: 'Nebula' },
                   ].map(bg => (
                     <button
                       key={bg.id ?? 'none'}
