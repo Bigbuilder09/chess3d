@@ -116,6 +116,7 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
       createBoard(scene, settings.boardStyle)
       pieceMapRef.current = initBoardPieces(scene, settings.pieceStyle)
       controlsRef.current = initControls(camera, { domElement: canvas })
+      setSceneBg(settings.bgImage ?? null)
 
       loop()
       animFrameRef.current = rafId
@@ -143,8 +144,17 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
   // ── Live piece style update ──────────────────────────────────────────────
   useEffect(() => {
     if (!sceneRef.current) return
-    rebuildPieces(sceneRef.current, pieceMapRef.current, settings.pieceStyle)
-    markDirty()
+    if (settings.pieceStyle === 'ok') {
+      preloadHiModels()
+        .then(() => {
+          if (sceneRef.current) rebuildPieces(sceneRef.current, pieceMapRef.current, 'ok')
+          markDirty()
+        })
+        .catch(err => console.warn('Hi model preload failed:', err))
+    } else {
+      rebuildPieces(sceneRef.current, pieceMapRef.current, settings.pieceStyle)
+      markDirty()
+    }
   }, [settings.pieceStyle])
 
   // ── Live BG image update ─────────────────────────────────────────────────
@@ -496,14 +506,7 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
                   ].map(s => (
                     <button
                       key={s.id}
-                      onClick={() => {
-                        setSettings(prev => ({ ...prev, pieceStyle: s.id }))
-                        if (s.id === 'ok') {
-                          preloadHiModels().then(() => {
-                            if (sceneRef.current) rebuildPieces(sceneRef.current, pieceMapRef.current, s.id)
-                          })
-                        }
-                      }}
+                      onClick={() => setSettings(prev => ({ ...prev, pieceStyle: s.id }))}
                       style={{ width: 'calc(33% - 6px)' }}
                       className={`py-2 px-1 rounded text-xs font-inter border transition-all text-center
                         ${settings.pieceStyle === s.id

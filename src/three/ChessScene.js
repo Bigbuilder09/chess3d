@@ -6,6 +6,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 let scene, camera, renderer, composer
 let dirLight, ambientLight
 let _dirtyFrames = 0
+let _bgLoadId = 0
 
 export function markDirty(frames = 2) {
   _dirtyFrames = Math.max(_dirtyFrames, frames)
@@ -140,8 +141,14 @@ export function setSceneBg(url) {
   const stars   = scene.getObjectByName('stars')
 
   if (url) {
+    const loadId = ++_bgLoadId
     new THREE.TextureLoader().load(url, (texture) => {
-      if (!scene) return
+      // Stale load — a newer request came in, discard this texture
+      if (loadId !== _bgLoadId || !scene) {
+        texture.dispose()
+        return
+      }
+      if (scene.background instanceof THREE.Texture) scene.background.dispose()
       scene.background = texture
       scene.fog = null
       if (skyDome) skyDome.visible = false
@@ -149,6 +156,8 @@ export function setSceneBg(url) {
       markDirty(4)
     })
   } else {
+    _bgLoadId++ // cancel any in-flight load
+    if (scene.background instanceof THREE.Texture) scene.background.dispose()
     scene.background = new THREE.Color('#06031A')
     scene.fog = new THREE.Fog('#1A3560', 32, 58)
     if (skyDome) skyDome.visible = true
@@ -162,9 +171,11 @@ export function renderScene() {
 }
 
 export function disposeScene() {
+  _bgLoadId++ // cancel any in-flight bg texture load
   if (scene?.userData._cleanupResize) {
     window.removeEventListener('resize', scene.userData._cleanupResize)
   }
+  if (scene?.background instanceof THREE.Texture) scene.background.dispose()
   if (renderer) {
     renderer.dispose()
     renderer = null

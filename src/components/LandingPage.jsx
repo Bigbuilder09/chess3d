@@ -115,7 +115,7 @@ export default function LandingPage({ playerInfo, setPlayerInfo, botDifficulty, 
         })
         pieceMapRef.current = pieceMap
       })
-      .catch(() => {})
+      .catch(err => console.warn('Model preload failed:', err))
 
     // Auto-rotate
     const controls = new OrbitControls(camera, renderer.domElement)
@@ -186,7 +186,15 @@ export default function LandingPage({ playerInfo, setPlayerInfo, botDifficulty, 
   // Live piece style update
   useEffect(() => {
     if (!sceneRef.current) return
-    rebuildPieces(sceneRef.current, pieceMapRef.current, settings.pieceStyle)
+    if (settings.pieceStyle === 'ok') {
+      preloadHiModels()
+        .then(() => {
+          if (sceneRef.current) rebuildPieces(sceneRef.current, pieceMapRef.current, 'ok')
+        })
+        .catch(err => console.warn('Hi model preload failed:', err))
+    } else {
+      rebuildPieces(sceneRef.current, pieceMapRef.current, settings.pieceStyle)
+    }
   }, [settings.pieceStyle])
 
   // Socket online count
@@ -370,14 +378,7 @@ export default function LandingPage({ playerInfo, setPlayerInfo, botDifficulty, 
               ].map(s => (
                 <button
                   key={s.id}
-                  onClick={() => {
-                    setSettings(prev => ({ ...prev, pieceStyle: s.id }))
-                    if (s.id === 'ok') {
-                      preloadHiModels().then(() => {
-                        if (sceneRef.current) rebuildPieces(sceneRef.current, pieceMapRef.current, s.id)
-                      })
-                    }
-                  }}
+                  onClick={() => setSettings(prev => ({ ...prev, pieceStyle: s.id }))}
                   className={`flex-1 py-2 px-1 rounded text-xs font-inter border transition-all text-center min-w-[44px]
                     ${settings.pieceStyle === s.id
                       ? 'border-gold text-gold bg-charcoal'
