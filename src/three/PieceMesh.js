@@ -586,16 +586,7 @@ function createGLBPiece(type, color, square, scene) {
   const template = MODEL_CACHE[t]
   if (!template) return createClassicPiece(type, color, square, scene) // fallback
 
-  const isRGB = t === 'q' || t === 'k'
-  const mat = isRGB
-    ? new THREE.MeshPhysicalMaterial({
-        color: color === 'white' ? '#D4D8DC' : '#DEC98A',
-        roughness: 0.18, metalness: 0.88,
-        clearcoat: 0.65, clearcoatRoughness: 0.10,
-        emissive: new THREE.Color('#ff0000'),
-        emissiveIntensity: 0.55,
-      })
-    : (color === 'white' ? GLB_WHITE_MAT() : GLB_BLACK_MAT())
+  const mat = color === 'white' ? GLB_WHITE_MAT() : GLB_BLACK_MAT()
   const inner = template.clone(true)
 
   inner.traverse(child => {
@@ -630,7 +621,6 @@ function createGLBPiece(type, color, square, scene) {
   pivot.userData = { pieceType: t, color, square, normalizedScale: 1, baseY: 0 }
   pivot.name = `piece_${type}_${color}_${square}`
 
-  if (isRGB) registerRGBPiece(pivot)
   scene.add(pivot)
   return pivot
 }
