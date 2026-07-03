@@ -3,9 +3,9 @@ import React, {
 } from 'react'
 import { useNavigate } from 'react-router-dom'
 import * as THREE from 'three'
-import { initScene, renderScene, disposeScene, getScene, getCamera } from '../three/ChessScene.js'
+import { initScene, renderScene, disposeScene, getScene, getCamera, markDirty, shouldRender } from '../three/ChessScene.js'
 import { createBoard, squareToWorld, worldToSquare, highlightSquare, clearAllHighlights, showLegalDots, clearLegalDots, getBoardGroup, updateBoardStyle } from '../three/BoardMesh.js'
-import { createPiece, movePiece, removePiece, selectPiece, deselectPiece, rebuildPieces, preloadModels, preloadHiModels, preloadSteampunk1Models } from '../three/PieceMesh.js'
+import { createPiece, movePiece, removePiece, selectPiece, deselectPiece, rebuildPieces, buildPiecesFromBoard, clearAllPieces, preloadModels, preloadHiModels, preloadSteampunk1Models, updateRGBPieces, clearRGBRegistry } from '../three/PieceMesh.js'
 import { initControls, updateControls, disposeControls, flipCamera } from '../three/CameraController.js'
 import { playCaptureEffect, playCheckEffect, clearCheckEffect, playCheckmateEffect } from '../three/CaptureEffect.js'
 import { playMoveSound, playCaptureSound, playQueenCaptureSound, playCheckSound, playCheckmateSound, playGameEndSound } from '../audio/sounds.js'
@@ -86,6 +86,7 @@ export default function GameScreen({ setGameResult, playerInfo, settings, setSet
   const { emit, on } = useSocket()
 
   const {
+    chess,
     moves,
     isCheck,
     isCheckmate,
@@ -97,7 +98,8 @@ export default function GameScreen({ setGameResult, playerInfo, settings, setSet
     applyServerMove,
     selectSquare,
     clearSelection,
-    getBoardState
+    getBoardState,
+    loadFen
   } = useChessGame(myColor)
 
   const [myTimeMs,  setMyTimeMs]  = useState(INITIAL_TIME)
@@ -108,6 +110,7 @@ export default function GameScreen({ setGameResult, playerInfo, settings, setSet
   const [myDrawOfferSent, setMyDrawOfferSent] = useState(false)
   const [isBoardFlipped, setIsBoardFlipped] = useState(myColor === 'black')
   const [promotionPending, setPromotionPending] = useState(null) // { from, to }
+  const [opponentReconnecting, setOpponentReconnecting] = useState(false)
 
   const isMyTurn = currentTurn === myColor
 
@@ -120,6 +123,27 @@ export default function GameScreen({ setGameResult, playerInfo, settings, setSet
     if (!canvas) return
 
     let rafId
+    let loopActive = true
+
+    const onVisibilityChange = () => {
+      if (document.hidden) {
+        loopActive = false
+      } else {
+        loopActive = true
+        markDirty(4)
+        loop()  // eslint-disable-line no-use-before-define
+      }
+    }
+    document.addEventListener('visibilitychange', onVisibilityChange)
+
+    function loop() {
+      if (!loopActive) return
+      rafId = requestAnimationFrame(loop)
+      updateControls()
+      if (updateRGBPieces()) markDirty()
+      if (shouldRender()) renderScene()
+    }
+
     async function init() {
       const { scene, camera } = initScene(canvas)
       sceneRef.current  = scene
@@ -141,11 +165,6 @@ export default function GameScreen({ setGameResult, playerInfo, settings, setSet
         camera.lookAt(0, 0, 0)
       }
 
-      function loop() {
-        rafId = requestAnimationFrame(loop)
-        updateControls()
-        renderScene()
-      }
       loop()
       animFrameRef.current = rafId
     }
@@ -153,7 +172,10 @@ export default function GameScreen({ setGameResult, playerInfo, settings, setSet
     init()
 
     return () => {
+      loopActive = false
       cancelAnimationFrame(rafId)
+      document.removeEventListener('visibilitychange', onVisibilityChange)
+      clearRGBRegistry()
       disposeControls()
       disposeScene()
     }
@@ -163,12 +185,14 @@ export default function GameScreen({ setGameResult, playerInfo, settings, setSet
   useEffect(() => {
     if (!sceneRef.current) return
     updateBoardStyle(sceneRef.current, settings.boardStyle)
+    markDirty()
   }, [settings.boardStyle])
 
   // ─── Live piece style update ─────────────────────────────────────────────────
   useEffect(() => {
     if (!sceneRef.current) return
     rebuildPieces(sceneRef.current, pieceMapRef.current, settings.pieceStyle)
+    markDirty()
   }, [settings.pieceStyle])
 
   // ─── Socket event listeners ──────────────────────────────────────────────────
@@ -315,8 +339,32 @@ export default function GameScreen({ setGameResult, playerInfo, settings, setSet
 
     const offDrawSent = on('draw_offer_sent', () => setMyDrawOfferSent(true))
 
-    const off6 = on('opponent_disconnected', () => {
-      handleGameOverRef.current({ reason: 'disconnect', winner: myColor })
+    const off6 = on('opponent_disconnecting', () => {
+      setOpponentReconnecting(true)
+    })
+
+    const offReconnected = on('opponent_reconnected', () => {
+      setOpponentReconnecting(false)
+    })
+
+    const offRejoin = on('rejoin_success', ({ fen }) => {
+      const activeColor = fen.split(' ')[1] === 'w' ? 'white' : 'black'
+      setCurrentTurn(activeColor)
+      const scene = sceneRef.current
+      const map = pieceMapRef.current
+      if (!scene || !map) return
+      loadFen(fen)
+      clearAllPieces(scene, map)
+      const board = chess.current.board()
+      const newMap = buildPiecesFromBoard(scene, board, settingsRef.current.pieceStyle)
+      Object.assign(pieceMapRef.current, newMap)
+      clearAllHighlights()
+      clearLegalDots()
+      markDirty(4)
+    })
+
+    const offRejoinFailed = on('rejoin_failed', () => {
+      navigate('/')
     })
 
     const off7 = on('game_over', (data) => {
@@ -325,6 +373,7 @@ export default function GameScreen({ setGameResult, playerInfo, settings, setSet
 
     return () => {
       off1?.(); off2?.(); off3?.(); off4?.(); off5?.(); off6?.(); off7?.(); offDrawSent?.()
+      offReconnected?.(); offRejoin?.(); offRejoinFailed?.()
     }
   }, [on, applyServerMove, myColor]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -707,6 +756,15 @@ export default function GameScreen({ setGameResult, playerInfo, settings, setSet
         {/* Center: Three.js canvas */}
         <div className="flex-1 relative min-w-0 min-h-0">
           <CheckBanner isInCheck={isCheck && currentTurn === myColor} isCheckmate={isCheckmate} />
+
+          {opponentReconnecting && (
+            <div
+              className="absolute top-14 left-1/2 -translate-x-1/2 px-5 py-2 rounded-xl z-30 text-center"
+              style={{ background: '#14141F', border: '1px solid #C8A96E' }}
+            >
+              <span className="text-gold font-inter text-sm">Opponent disconnected — waiting 30s...</span>
+            </div>
+          )}
 
           <canvas
             ref={canvasRef}

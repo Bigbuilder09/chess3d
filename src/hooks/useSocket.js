@@ -17,8 +17,16 @@ export function useSocket() {
     }
     socketRef.current = sharedSocket
 
+    const handleReconnect = () => {
+      try {
+        const { gameId, playerId } = JSON.parse(sessionStorage.getItem('game_data') || '{}')
+        if (gameId && playerId) sharedSocket.emit('rejoin_game', { gameId, playerId })
+      } catch {}
+    }
+    sharedSocket.on('reconnect', handleReconnect)
+
     return () => {
-      // Don't disconnect on unmount — keep socket alive across routes
+      sharedSocket.off('reconnect', handleReconnect)
     }
   }, [])
 

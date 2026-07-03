@@ -135,6 +135,22 @@ export function useChessGame(playerColor) {
   }, [chess])
 
   /**
+   * Load a FEN string into the game state (used for reconnection).
+   */
+  const loadFen = useCallback((fen) => {
+    try {
+      chess.load(fen)
+      setFen(fen)
+      setIsCheck(chess.isCheck())
+      setIsCheckmate(chess.isCheckmate())
+      setSelectedSquare(null)
+      setLegalMoves([])
+    } catch (e) {
+      console.error('Failed to load FEN:', e)
+    }
+  }, [chess])
+
+  /**
    * Get all pieces on the board from the FEN.
    */
   const getBoardState = useCallback(() => {
@@ -173,6 +189,7 @@ export function useChessGame(playerColor) {
     clearSelection,
     needsPromotion,
     resetGame,
+    loadFen,
     getBoardState
   }
 }

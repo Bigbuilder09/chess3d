@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { gsap } from 'gsap'
 import { squareToWorld } from './BoardMesh.js'
+import { markDirty } from './ChessScene.js'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -83,6 +84,7 @@ function spawnShards(scene, pos, count, colors, speed, lifetime) {
       })
       return
     }
+    markDirty()
     const gravity = t * 0.015
     shards.forEach(m => {
       m.position.x += m.userData.vel.x
@@ -107,6 +109,7 @@ function spawnLightFlash(scene, pos, color, intensity, duration) {
     intensity: 0,
     duration: duration / 1000,
     ease: 'power2.out',
+    onUpdate: () => markDirty(),
     onComplete: () => scene.remove(light)
   })
 }
@@ -128,12 +131,14 @@ function spawnShockwave(scene, pos) {
   gsap.to(ring.scale, {
     x: 14, y: 14, z: 14,
     duration: 0.4,
-    ease: 'power2.out'
+    ease: 'power2.out',
+    onUpdate: () => markDirty()
   })
   gsap.to(mat, {
     opacity: 0,
     duration: 0.4,
     ease: 'power2.out',
+    onUpdate: () => markDirty(),
     onComplete: () => {
       scene.remove(ring)
       geo.dispose()
@@ -153,8 +158,10 @@ function shake(controls, intensity, duration) {
     const t = elapsed / duration
     if (t >= 1) {
       controls.target.copy(originTarget)
+      markDirty()
       return
     }
+    markDirty()
     const decay = 1 - t
     controls.target.x = originTarget.x + (Math.random() - 0.5) * 2 * intensity * decay
     controls.target.z = originTarget.z + (Math.random() - 0.5) * 2 * intensity * decay
@@ -187,10 +194,12 @@ export function playCheckEffect(scene, kingMesh) {
     ease: 'power2.out',
     yoyo: true,
     repeat: 3,
+    onUpdate: () => markDirty(),
     onComplete: () => {
       gsap.to(light, {
         intensity: 1.5,
-        duration: 0.3
+        duration: 0.3,
+        onUpdate: () => markDirty()
       })
     }
   })
@@ -212,13 +221,15 @@ export function playCheckmateEffect(scene, controls, kingMesh) {
       z: Math.PI / 2,
       duration: 0.6,
       delay: 0.2,
-      ease: 'power2.in'
+      ease: 'power2.in',
+      onUpdate: () => markDirty()
     })
     gsap.to(kingMesh.position, {
       y: -0.3,
       duration: 0.6,
       delay: 0.2,
-      ease: 'bounce.out'
+      ease: 'bounce.out',
+      onUpdate: () => markDirty()
     })
 
     // 80 gold/red shards from king position

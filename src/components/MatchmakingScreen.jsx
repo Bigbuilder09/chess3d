@@ -19,9 +19,10 @@ function getOrCreatePlayerId() {
 export default function MatchmakingScreen({ playerInfo }) {
   const navigate = useNavigate()
   const canvasRef = useRef(null)
-  const { emit, on } = useSocket()
+  const { socket, emit, on } = useSocket()
 
   const [elapsed, setElapsed] = useState(0)
+  const [connected, setConnected] = useState(false)
   const [ratingRange, setRatingRange] = useState(150)
   const [matchFound, setMatchFound] = useState(null)
   const [countdown, setCountdown] = useState(3)
@@ -101,10 +102,18 @@ export default function MatchmakingScreen({ playerInfo }) {
     const playerId = getOrCreatePlayerId()
     const name = playerInfo.name || 'Guest'
     const rating = playerInfo.rating || 1200
-
     const lastColor = sessionStorage.getItem('last_color')
     const preferredColor = lastColor === 'white' ? 'black' : lastColor === 'black' ? 'white' : null
-    emit('join_queue', { playerId, rating, name, preferredColor })
+
+    function doJoin() {
+      setConnected(true)
+      emit('join_queue', { playerId, rating, name, preferredColor })
+    }
+
+    const sock = socket.current
+    // ใช้ on แทน once เพื่อให้ rejoin ได้หาก socket reconnect
+    sock?.on('connect', doJoin)
+    if (sock?.connected) doJoin()
 
     const offMatchFound = on('match_found', (data) => {
       if (!cancelledRef.current) setMatchFound(data)
@@ -115,6 +124,7 @@ export default function MatchmakingScreen({ playerInfo }) {
     })
 
     return () => {
+      sock?.off('connect', doJoin)
       offMatchFound?.()
       offGameStart?.()
       emit('leave_queue', { playerId })
@@ -208,6 +218,18 @@ export default function MatchmakingScreen({ playerInfo }) {
         />
 
         <h2 className="font-cinzel text-ivory text-2xl tracking-widest mb-1">FINDING OPPONENT</h2>
+
+        {!connected ? (
+          <div className="text-amber-400 font-inter text-xs mb-3 flex items-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse inline-block" />
+            Connecting to server…
+          </div>
+        ) : (
+          <div className="text-emerald-400 font-inter text-xs mb-3 flex items-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
+            In queue
+          </div>
+        )}
 
         <div className="font-mono text-gold text-3xl tracking-widest mb-2">
           {fmt(elapsed)}

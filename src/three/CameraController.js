@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { gsap } from 'gsap'
+import { markDirty } from './ChessScene.js'
 
 let controls = null
 let dblclickHandler = null
@@ -22,6 +23,8 @@ export function initControls(camera, renderer) {
   controls.rotateSpeed    = 0.6
   controls.zoomSpeed      = 0.8
 
+  controls.addEventListener('change', () => markDirty(30))
+
   // Set initial position
   camera.position.copy(DEFAULT_POSITION)
   controls.target.copy(DEFAULT_TARGET)
@@ -42,7 +45,8 @@ export function resetCamera(camera) {
     y: DEFAULT_POSITION.y,
     z: DEFAULT_POSITION.z,
     duration: 0.4,
-    ease: 'power2.inOut'
+    ease: 'power2.inOut',
+    onUpdate: () => markDirty()
   })
   gsap.to(controls.target, {
     x: DEFAULT_TARGET.x,
@@ -50,7 +54,7 @@ export function resetCamera(camera) {
     z: DEFAULT_TARGET.z,
     duration: 0.4,
     ease: 'power2.inOut',
-    onUpdate: () => controls.update()
+    onUpdate: () => { controls.update(); markDirty() }
   })
 }
 
@@ -65,13 +69,14 @@ export function flipCamera(camera) {
     y: 8,
     z: -10,
     duration: 0.6,
-    ease: 'power2.inOut'
+    ease: 'power2.inOut',
+    onUpdate: () => markDirty()
   })
   gsap.to(controls.target, {
     x: 0, y: 0, z: 0,
     duration: 0.6,
     ease: 'power2.inOut',
-    onUpdate: () => controls.update()
+    onUpdate: () => { controls.update(); markDirty() }
   })
 }
 

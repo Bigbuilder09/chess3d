@@ -5,6 +5,16 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 
 let scene, camera, renderer, composer
 let dirLight, ambientLight
+let _dirtyFrames = 0
+
+export function markDirty(frames = 2) {
+  _dirtyFrames = Math.max(_dirtyFrames, frames)
+}
+
+export function shouldRender() {
+  if (_dirtyFrames > 0) { _dirtyFrames--; return true }
+  return false
+}
 
 export function initScene(canvas) {
   // Guard against double-init (React StrictMode invokes effects twice).
@@ -12,6 +22,7 @@ export function initScene(canvas) {
   if (renderer) {
     disposeScene()
   }
+  _dirtyFrames = 4
 
   // Scene
   scene = new THREE.Scene()
@@ -83,8 +94,8 @@ export function initScene(canvas) {
   dirLight = new THREE.DirectionalLight('#fff8e7', 1.1)
   dirLight.position.set(5, 12, 8)
   dirLight.castShadow = true
-  dirLight.shadow.mapSize.width = 2048
-  dirLight.shadow.mapSize.height = 2048
+  dirLight.shadow.mapSize.width = 1024
+  dirLight.shadow.mapSize.height = 1024
   dirLight.shadow.camera.near = 0.5
   dirLight.shadow.camera.far = 50
   dirLight.shadow.camera.left = -10

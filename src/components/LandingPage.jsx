@@ -17,7 +17,7 @@ export default function LandingPage({ playerInfo, setPlayerInfo, botDifficulty, 
   const [guestName, setGuestName] = useState('')
   const [showNameInput, setShowNameInput] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
-  const { on } = useSocket()
+  const { socket, emit, on } = useSocket()
 
   // Three.js background scene — runs once on mount
   useEffect(() => {
@@ -186,8 +186,16 @@ export default function LandingPage({ playerInfo, setPlayerInfo, botDifficulty, 
   // Socket online count
   useEffect(() => {
     const cleanup = on('online_count', (count) => setOnlineCount(count))
+
+    const sock = socket.current
+    if (sock?.connected) {
+      emit('get_online_count')
+    } else {
+      sock?.once('connect', () => emit('get_online_count'))
+    }
+
     return cleanup
-  }, [on])
+  }, [on, emit, socket])
 
   const handlePlayNow = () => {
     navigate('/matchmaking')

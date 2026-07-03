@@ -2,9 +2,9 @@ import React, { useEffect, useRef, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import * as THREE from 'three'
 import { Chess } from 'chess.js'
-import { initScene, renderScene, disposeScene } from '../three/ChessScene.js'
+import { initScene, renderScene, disposeScene, markDirty, shouldRender } from '../three/ChessScene.js'
 import { createBoard, highlightSquare, clearAllHighlights, showLegalDots, clearLegalDots, getBoardGroup, updateBoardStyle } from '../three/BoardMesh.js'
-import { createPiece, movePiece, removePiece, selectPiece, deselectPiece, rebuildPieces, preloadModels, preloadHiModels, preloadSteampunk1Models } from '../three/PieceMesh.js'
+import { createPiece, movePiece, removePiece, selectPiece, deselectPiece, rebuildPieces, preloadModels, preloadHiModels, preloadSteampunk1Models, updateRGBPieces, clearRGBRegistry } from '../three/PieceMesh.js'
 import { initControls, updateControls, disposeControls } from '../three/CameraController.js'
 import { playCaptureEffect, playCheckEffect, clearCheckEffect, playCheckmateEffect } from '../three/CaptureEffect.js'
 import { playMoveSound, playCaptureSound, playQueenCaptureSound, playCheckSound, playCheckmateSound, playGameEndSound } from '../audio/sounds.js'
@@ -81,6 +81,27 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
     if (!canvas) return
 
     let rafId
+    let loopActive = true
+
+    const onVisibilityChange = () => {
+      if (document.hidden) {
+        loopActive = false
+      } else {
+        loopActive = true
+        markDirty(4)
+        loop()  // eslint-disable-line no-use-before-define
+      }
+    }
+    document.addEventListener('visibilitychange', onVisibilityChange)
+
+    function loop() {
+      if (!loopActive) return
+      rafId = requestAnimationFrame(loop)
+      updateControls()
+      if (updateRGBPieces()) markDirty()
+      if (shouldRender()) renderScene()
+    }
+
     async function init() {
       const { scene, camera } = initScene(canvas)
       sceneRef.current = scene
@@ -96,11 +117,6 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
       pieceMapRef.current = initBoardPieces(scene, settings.pieceStyle)
       controlsRef.current = initControls(camera, { domElement: canvas })
 
-      function loop() {
-        rafId = requestAnimationFrame(loop)
-        updateControls()
-        renderScene()
-      }
       loop()
       animFrameRef.current = rafId
     }
@@ -108,7 +124,10 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
     init()
 
     return () => {
+      loopActive = false
       cancelAnimationFrame(rafId)
+      document.removeEventListener('visibilitychange', onVisibilityChange)
+      clearRGBRegistry()
       disposeControls()
       disposeScene()
     }
@@ -118,12 +137,14 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
   useEffect(() => {
     if (!sceneRef.current) return
     updateBoardStyle(sceneRef.current, settings.boardStyle)
+    markDirty()
   }, [settings.boardStyle])
 
   // ── Live piece style update ──────────────────────────────────────────────
   useEffect(() => {
     if (!sceneRef.current) return
     rebuildPieces(sceneRef.current, pieceMapRef.current, settings.pieceStyle)
+    markDirty()
   }, [settings.pieceStyle])
 
   // ── Apply a move (shared between player and bot) ─────────────────────────

@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid'
 
 const matchmakingQueue = []
 const activeGames = {}
+const disconnectTimers = new Map()  // gameId → { white?: timeoutId, black?: timeoutId }
 
 /**
  * Add a player to the matchmaking queue.
@@ -228,22 +229,72 @@ export function processMove(gameId, playerId, socketId, from, to, promotion) {
 
 /**
  * Handle player disconnect from a game.
+ * Starts a 30-second grace period before forfeiting the game.
  */
-export function handleDisconnect(socketId) {
-  // Remove from queue
+export function handleDisconnect(socketId, onExpire) {
   const qIdx = matchmakingQueue.findIndex(p => p.socketId === socketId)
-  if (qIdx !== -1) matchmakingQueue.splice(qIdx, 1)
+  if (qIdx !== -1) { matchmakingQueue.splice(qIdx, 1); return null }
 
-  // Find active game
   for (const [gameId, game] of Object.entries(activeGames)) {
-    if (game.white.socketId === socketId || game.black.socketId === socketId) {
-      const opponentSocketId =
-        game.white.socketId === socketId ? game.black.socketId : game.white.socketId
-      delete activeGames[gameId]
-      return opponentSocketId
-    }
+    const isWhite = game.white.socketId === socketId
+    const isBlack = game.black.socketId === socketId
+    if (!isWhite && !isBlack) continue
+
+    const side = isWhite ? 'white' : 'black'
+    const opponentSocketId = isWhite ? game.black.socketId : game.white.socketId
+    const winner = isWhite ? 'black' : 'white'
+
+    game[side].disconnected = true
+
+    const timerId = setTimeout(() => {
+      if (activeGames[gameId]) {
+        const liveGame = activeGames[gameId]
+        const oppSocket = isWhite ? liveGame.black.socketId : liveGame.white.socketId
+        delete activeGames[gameId]
+        const gameTimers = disconnectTimers.get(gameId)
+        if (gameTimers) {
+          for (const tid of Object.values(gameTimers)) clearTimeout(tid)
+          disconnectTimers.delete(gameId)
+        }
+        onExpire(gameId, winner, oppSocket)
+      }
+    }, 30000)
+
+    const existing = disconnectTimers.get(gameId) || {}
+    existing[side] = timerId
+    disconnectTimers.set(gameId, existing)
+    return { opponentSocketId, gameId }
   }
   return null
+}
+
+/**
+ * Attempt to rejoin an active game after reconnection.
+ * Returns { fen, color, opponentSocketId } on success, or null.
+ */
+export function rejoinGame(gameId, playerId, newSocketId) {
+  const game = activeGames[gameId]
+  if (!game) return null
+
+  const isWhite = game.white.playerId === playerId
+  const isBlack = game.black.playerId === playerId
+  if (!isWhite && !isBlack) return null
+
+  const side = isWhite ? 'white' : 'black'
+  if (!game[side].disconnected) return null
+
+  const gameTimers = disconnectTimers.get(gameId)
+  if (gameTimers?.[side]) {
+    clearTimeout(gameTimers[side])
+    delete gameTimers[side]
+    if (!gameTimers.white && !gameTimers.black) disconnectTimers.delete(gameId)
+  }
+
+  game[side].socketId = newSocketId
+  game[side].disconnected = false
+
+  const opponentSocketId = isWhite ? game.black.socketId : game.white.socketId
+  return { fen: game.chess.fen(), color: side, opponentSocketId }
 }
 
 /**

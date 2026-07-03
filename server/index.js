@@ -8,6 +8,7 @@ import {
   scanQueue,
   processMove,
   handleDisconnect,
+  rejoinGame,
   offerDraw,
   resignGame,
   getGame,
@@ -157,14 +158,30 @@ io.on('connection', (socket) => {
     onlinePlayers = Math.max(0, onlinePlayers - 1)
     io.emit('online_count', onlinePlayers)
 
-    const opponentSocketId = handleDisconnect(socket.id)
-    if (opponentSocketId) {
-      // C2: Only emit opponent_disconnected; the client handles game_over with the correct winner.
-      // Emitting a second game_over { winner: null } would overwrite the win with a draw.
-      io.to(opponentSocketId).emit('opponent_disconnected')
-    }
+    const result = handleDisconnect(socket.id, (gameId, winner, oppSocketId) => {
+      io.to(oppSocketId).emit('game_over', { reason: 'disconnect', winner })
+      console.log(`[GRACE EXPIRED] gameId=${gameId} winner=${winner}`)
+    })
 
-    console.log(`[DISCONNECT] socket=${socket.id} total=${onlinePlayers}`)
+    if (result) {
+      io.to(result.opponentSocketId).emit('opponent_disconnecting', { gracePeriod: 30 })
+      console.log(`[DISCONNECT] socket=${socket.id} gameId=${result.gameId} grace=30s`)
+    } else {
+      console.log(`[DISCONNECT] socket=${socket.id} total=${onlinePlayers}`)
+    }
+  })
+
+  // --- REJOIN ---
+  socket.on('rejoin_game', ({ gameId, playerId }) => {
+    const result = rejoinGame(gameId, playerId, socket.id)
+    if (!result) {
+      socket.emit('rejoin_failed')
+      console.log(`[REJOIN FAILED] gameId=${gameId} playerId=${playerId}`)
+      return
+    }
+    socket.emit('rejoin_success', { fen: result.fen, color: result.color })
+    io.to(result.opponentSocketId).emit('opponent_reconnected')
+    console.log(`[REJOIN] gameId=${gameId} color=${result.color}`)
   })
 })
 

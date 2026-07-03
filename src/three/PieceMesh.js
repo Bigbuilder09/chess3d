@@ -3,6 +3,39 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js'
 import { gsap } from 'gsap'
 import { squareToWorld } from './BoardMesh.js'
+import { markDirty } from './ChessScene.js'
+
+// ─── RGB animation registry ────────────────────────────────────────────────────
+const _rgbGroups = new Map()
+const _tmpRGBColor = new THREE.Color()
+
+export function registerRGBPiece(group) {
+  _rgbGroups.set(group, performance.now())
+}
+
+export function unregisterRGBPiece(group) {
+  _rgbGroups.delete(group)
+}
+
+export function updateRGBPieces() {
+  if (_rgbGroups.size === 0) return false
+  const now = performance.now()
+  for (const [group, startMs] of _rgbGroups) {
+    const t = (now - startMs) / 1000
+    _tmpRGBColor.setHSL((t * 0.12) % 1, 1.0, 0.5)
+    group.traverse(child => {
+      if (child.isMesh && child.material) {
+        child.material.emissive.copy(_tmpRGBColor)
+        child.material.emissiveIntensity = 0.55
+      }
+    })
+  }
+  return true
+}
+
+export function clearRGBRegistry() {
+  _rgbGroups.clear()
+}
 
 // ─── GLB model loader & cache ─────────────────────────────────────────────────
 const draco = new DRACOLoader()
@@ -553,7 +586,16 @@ function createGLBPiece(type, color, square, scene) {
   const template = MODEL_CACHE[t]
   if (!template) return createClassicPiece(type, color, square, scene) // fallback
 
-  const mat = color === 'white' ? GLB_WHITE_MAT() : GLB_BLACK_MAT()
+  const isRGB = t === 'q' || t === 'k'
+  const mat = isRGB
+    ? new THREE.MeshPhysicalMaterial({
+        color: color === 'white' ? '#D4D8DC' : '#DEC98A',
+        roughness: 0.18, metalness: 0.88,
+        clearcoat: 0.65, clearcoatRoughness: 0.10,
+        emissive: new THREE.Color('#ff0000'),
+        emissiveIntensity: 0.55,
+      })
+    : (color === 'white' ? GLB_WHITE_MAT() : GLB_BLACK_MAT())
   const inner = template.clone(true)
 
   inner.traverse(child => {
@@ -588,6 +630,7 @@ function createGLBPiece(type, color, square, scene) {
   pivot.userData = { pieceType: t, color, square, normalizedScale: 1, baseY: 0 }
   pivot.name = `piece_${type}_${color}_${square}`
 
+  if (isRGB) registerRGBPiece(pivot)
   scene.add(pivot)
   return pivot
 }
@@ -750,7 +793,7 @@ function createHiPiece(type, color, square, scene) {
       if (child.isMesh) {
         child.material = texMat
         child.castShadow = true
-        child.receiveShadow = true
+        child.receiveShadow = false  // MatCap ignores lighting, no need to receive shadows
       }
     })
   } else {
@@ -872,6 +915,7 @@ export function createPiece(type, color, square, scene, style = 'classic') {
 export function rebuildPieces(scene, pieceMap, style) {
   for (const [square, mesh] of Object.entries(pieceMap)) {
     const { pieceType, color } = mesh.userData
+    unregisterRGBPiece(mesh)
     scene.remove(mesh)
     mesh.traverse(child => {
       if (child.isMesh) {
@@ -889,6 +933,42 @@ export function rebuildPieces(scene, pieceMap, style) {
 }
 
 /**
+ * Build pieceMap from a chess.board() array.
+ * board: 8x8 array of {type, color} | null  (from chess.js .board())
+ */
+export function buildPiecesFromBoard(scene, board, style) {
+  const pieceMap = {}
+  board.forEach((row, rankIdx) => {
+    row.forEach((piece, fileIdx) => {
+      if (!piece) return
+      const square = String.fromCharCode(97 + fileIdx) + (8 - rankIdx)
+      const color = piece.color === 'w' ? 'white' : 'black'
+      const mesh = createPiece(piece.type, color, square, scene, style)
+      if (mesh) pieceMap[square] = mesh
+    })
+  })
+  return pieceMap
+}
+
+/**
+ * Remove all pieces from scene and clear the pieceMap in-place.
+ */
+export function clearAllPieces(scene, pieceMap) {
+  for (const mesh of Object.values(pieceMap)) {
+    unregisterRGBPiece(mesh)
+    scene.remove(mesh)
+    mesh.traverse(child => {
+      if (child.isMesh) {
+        child.geometry?.dispose()
+        const mats = Array.isArray(child.material) ? child.material : [child.material]
+        mats.forEach(m => { m.map?.dispose(); m.dispose() })
+      }
+    })
+  }
+  for (const key of Object.keys(pieceMap)) delete pieceMap[key]
+}
+
+/**
  * Animate a piece to a new square.
  * @param {THREE.Group} piece
  * @param {string} toSquare
@@ -903,7 +983,7 @@ export function movePiece(piece, toSquare, duration = 0.4) {
   const arcHeight = Math.max(0.8, dist * 0.3)
 
   return new Promise(resolve => {
-    gsap.timeline({ onComplete: resolve })
+    gsap.timeline({ onComplete: resolve, onUpdate: () => markDirty() })
       .to(piece.position, {
         x: target.x,
         y: current.y + arcHeight,
@@ -925,11 +1005,13 @@ export function movePiece(piece, toSquare, duration = 0.4) {
  * Remove a piece from the scene with a quick pop-out animation.
  */
 export function removePiece(piece, scene) {
+  unregisterRGBPiece(piece)
   return new Promise(resolve => {
     gsap.to(piece.scale, {
       x: 0, y: 0, z: 0,
       duration: 0.2,
       ease: 'power2.in',
+      onUpdate: () => markDirty(),
       onComplete: () => {
         scene.remove(piece)
         piece.traverse(child => {
@@ -956,7 +1038,8 @@ export function selectPiece(piece) {
   gsap.to(piece.scale, {
     x: s * 1.12, y: s * 1.12, z: s * 1.12,
     duration: 0.2,
-    ease: 'back.out(2)'
+    ease: 'back.out(2)',
+    onUpdate: () => markDirty()
   })
 }
 
@@ -968,6 +1051,7 @@ export function deselectPiece(piece) {
   gsap.to(piece.scale, {
     x: s, y: s, z: s,
     duration: 0.2,
-    ease: 'power2.out'
+    ease: 'power2.out',
+    onUpdate: () => markDirty()
   })
 }
