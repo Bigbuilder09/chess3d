@@ -444,7 +444,12 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
   }
 
   return (
-    <div className="w-full h-full flex flex-col bg-obsidian overflow-hidden">
+    <div
+      className="w-full h-full flex flex-col overflow-hidden"
+      style={settings.bgImage
+        ? { backgroundImage: `url(${settings.bgImage})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+        : { background: '#06031A' }}
+    >
       {/* Top bar */}
       <div className="flex-shrink-0 h-12 flex items-center justify-between px-4" style={{ background: '#14141F', borderBottom: '1px solid #2A2A3C' }}>
         <span className="font-cinzel text-gold text-lg tracking-widest flex-shrink-0">REGICIDE</span>
@@ -534,6 +539,37 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
                         style={{ background: b.color }}
                       />
                       {b.label}
+                    </button>
+                  ))}
+                </div>
+
+                <p className="text-ivory font-inter text-xs mt-3 mb-2">Background</p>
+                <div className="flex gap-2">
+                  {[
+                    { id: null,                label: 'None' },
+                    { id: '/bg/ball-room.jpg', label: 'Ballroom' },
+                    { id: '/bg/stage-a.jpg',   label: 'Stage' },
+                  ].map(bg => (
+                    <button
+                      key={bg.id ?? 'none'}
+                      onClick={() => setSettings(prev => ({ ...prev, bgImage: bg.id }))}
+                      style={{
+                        flex: 1,
+                        height: 52,
+                        backgroundImage: bg.id ? `url(${bg.id})` : 'none',
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                      }}
+                      className={`relative rounded border transition-all overflow-hidden
+                        ${settings.bgImage === bg.id
+                          ? 'border-gold'
+                          : 'border-carbon hover:border-ash'}`}
+                    >
+                      {!bg.id && <span className="text-ash text-xs">None</span>}
+                      <div className="absolute bottom-0 left-0 right-0 py-0.5 text-center text-xs text-ivory font-inter"
+                        style={{ background: 'rgba(0,0,0,0.6)' }}>
+                        {bg.label}
+                      </div>
                     </button>
                   ))}
                 </div>
