@@ -101,15 +101,21 @@ export default function LandingPage({ playerInfo, setPlayerInfo, botDifficulty, 
       { type: 'n', color: 'white', sq: 'g1' }, { type: 'r', color: 'white', sq: 'h1' },
       ...['a','b','c','d','e','f','g','h'].map(f => ({ type: 'p', color: 'white', sq: `${f}2` })),
     ]
-    const pieceMap = {}
-    startPos.forEach(({ type, color, sq }) => {
-      const piece = createPiece(type, color, sq, scene, settings.pieceStyle)
-      if (piece) pieceMap[sq] = piece
-    })
-    pieceMapRef.current = pieceMap
 
-    // Pre-load GLB models in background so switching to glb/retro style works instantly
-    preloadModels().catch(() => {})
+    // Randomly pick from available sets, preload models first, then build pieces
+    const BG_STYLES = ['glb', 'retro', 'ok']
+    const bgStyle = BG_STYLES[Math.floor(Math.random() * BG_STYLES.length)];
+    (bgStyle === 'ok' ? Promise.all([preloadModels(), preloadHiModels()]) : preloadModels())
+      .then(() => {
+        if (!sceneRef.current) return
+        const pieceMap = {}
+        startPos.forEach(({ type, color, sq }) => {
+          const piece = createPiece(type, color, sq, scene, bgStyle)
+          if (piece) pieceMap[sq] = piece
+        })
+        pieceMapRef.current = pieceMap
+      })
+      .catch(() => {})
 
     // Auto-rotate
     const controls = new OrbitControls(camera, renderer.domElement)
