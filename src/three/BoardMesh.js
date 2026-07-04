@@ -53,7 +53,7 @@ const BOARD_MODELS = {
 
 const BOARD_MODEL_SCALE = {
   pink:     9.2,
-  historic: 9.5,
+  historic: 10.2,
 }
 
 let boardGroup = null
