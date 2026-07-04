@@ -566,6 +566,7 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
                     { id: null,       label: 'Default' },
                     { id: 'pink',     label: 'Pink' },
                     { id: 'historic', label: 'Historic' },
+                    { id: 'vic',      label: 'Vic' },
                   ].map(bm => (
                     <button
                       key={bm.id ?? 'default'}
