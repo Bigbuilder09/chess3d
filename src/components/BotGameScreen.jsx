@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import * as THREE from 'three'
 import { Chess } from 'chess.js'
 import { initScene, renderScene, disposeScene, markDirty, shouldRender, setSceneBg } from '../three/ChessScene.js'
-import { createBoard, highlightSquare, clearAllHighlights, showLegalDots, clearLegalDots, getBoardGroup, updateBoardStyle } from '../three/BoardMesh.js'
+import { createBoard, highlightSquare, clearAllHighlights, showLegalDots, clearLegalDots, getBoardGroup, updateBoardStyle, setBoardModel } from '../three/BoardMesh.js'
 import { createPiece, movePiece, removePiece, selectPiece, deselectPiece, rebuildPieces, preloadModels, preloadHiModels, updateRGBPieces, clearRGBRegistry } from '../three/PieceMesh.js'
 import { initControls, updateControls, disposeControls } from '../three/CameraController.js'
 import { playCaptureEffect, playCheckEffect, clearCheckEffect, playCheckmateEffect } from '../three/CaptureEffect.js'
@@ -114,6 +114,7 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
       }
 
       createBoard(scene, settings.boardStyle)
+      setBoardModel(settings.boardModel ?? null)
       pieceMapRef.current = initBoardPieces(scene, settings.pieceStyle)
       controlsRef.current = initControls(camera, { domElement: canvas })
       setSceneBg(settings.bgImage ?? null)
@@ -156,6 +157,11 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
       markDirty()
     }
   }, [settings.pieceStyle])
+
+  // ── Live board model update ──────────────────────────────────────────────
+  useEffect(() => {
+    setBoardModel(settings.boardModel ?? null)
+  }, [settings.boardModel])
 
   // ── Live BG image update ─────────────────────────────────────────────────
   useEffect(() => {
@@ -546,11 +552,34 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
                   ))}
                 </div>
 
+                <p className="text-ivory font-inter text-xs mt-3 mb-2">Board Model</p>
+                <div className="flex gap-2 mb-3">
+                  {[
+                    { id: null,       label: 'Default' },
+                    { id: 'pink',     label: 'Pink' },
+                    { id: 'historic', label: 'Historic' },
+                  ].map(bm => (
+                    <button
+                      key={bm.id ?? 'default'}
+                      onClick={() => setSettings(prev => ({ ...prev, boardModel: bm.id }))}
+                      style={{ flex: 1 }}
+                      className={`py-2 px-1 rounded text-xs font-inter border transition-all text-center
+                        ${settings.boardModel === bm.id
+                          ? 'border-gold text-gold bg-charcoal'
+                          : 'border-carbon text-ash hover:border-ash hover:text-ivory'}`}
+                    >
+                      {bm.label}
+                    </button>
+                  ))}
+                </div>
+
                 <p className="text-ivory font-inter text-xs mt-3 mb-2">Background</p>
                 <div className="flex gap-2">
                   {[
                     { id: null,                   label: 'None' },
                     { id: '/bg/golden-smoke.jpg', label: 'Nebula' },
+                    { id: '/bg/galaxy1.jpg',      label: 'Galaxy I' },
+                    { id: '/bg/galaxy2.jpg',      label: 'Galaxy II' },
                   ].map(bg => (
                     <button
                       key={bg.id ?? 'none'}
@@ -583,10 +612,10 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
       </div>
 
       {/* Main area — desktop: row, mobile: column */}
-      <div className="flex-1 flex flex-col md:flex-row overflow-hidden min-h-0">
+      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden min-h-0">
 
         {/* Opponent (bot) panel — mobile: top strip */}
-        <div className="md:hidden flex-shrink-0 px-3 py-2 flex items-center justify-between"
+        <div className="lg:hidden flex-shrink-0 px-3 py-2 flex items-center justify-between"
              style={{ background: '#14141F', borderBottom: '1px solid #2A2A3C' }}>
           <PlayerPanel
             name={`Bot (${difficulty})`}
@@ -600,7 +629,7 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
           />
         </div>
         {/* Left sidebar — desktop only */}
-        <div className="hidden md:flex flex-col justify-between py-3 px-2 flex-shrink-0" style={{ width: 220, borderRight: '1px solid #2A2A3C', background: '#14141F' }}>
+        <div className="hidden lg:flex flex-col justify-between py-3 px-2 flex-shrink-0" style={{ width: 220, borderRight: '1px solid #2A2A3C', background: '#14141F' }}>
           <PlayerPanel
             name={`Bot (${difficulty})`}
             rating={{ beginner: 800, casual: 1000, club: 1300, advanced: 1600, expert: 1900, master: 2200 }[difficulty] ?? 1200}
@@ -664,7 +693,7 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
         </div>
 
         {/* Right: move log — desktop only */}
-        <div className="hidden md:block flex-shrink-0" style={{ width: 200 }}>
+        <div className="hidden lg:block flex-shrink-0" style={{ width: 200 }}>
           <MoveLog
             moves={moves}
             onFlipBoard={() => {}}
@@ -674,7 +703,7 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
         </div>
 
         {/* My panel + controls — mobile only, bottom strip */}
-        <div className="md:hidden flex-shrink-0 px-3 py-2 flex items-center justify-between gap-2"
+        <div className="lg:hidden flex-shrink-0 px-3 py-2 flex items-center justify-between gap-2"
              style={{ background: '#14141F', borderTop: '1px solid #2A2A3C' }}>
           <PlayerPanel
             name={playerInfo?.name || 'You'}

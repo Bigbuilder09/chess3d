@@ -13,7 +13,7 @@ export default function App() {
     rating: 1200
   })
   const [botDifficulty, setBotDifficulty] = useState('medium')
-  const [settings, setSettings] = useState({ pieceStyle: 'glb', boardStyle: 'wood', bgImage: null })
+  const [settings, setSettings] = useState({ pieceStyle: 'glb', boardStyle: 'wood', bgImage: null, boardModel: null })
 
   return (
     <Routes>

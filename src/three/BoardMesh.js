@@ -1,4 +1,10 @@
 import * as THREE from 'three'
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js'
+import { markDirty } from './ChessScene.js'
+
+const _dracoLoader = new DRACOLoader()
+_dracoLoader.setDecoderPath('/draco/')
 
 // ─── Board style definitions ──────────────────────────────────────────────────
 const BOARD_STYLES = {
@@ -40,6 +46,16 @@ const BOARD_STYLES = {
   }
 }
 
+const BOARD_MODELS = {
+  pink:     '/boards/pink-board.glb',
+  historic: '/boards/historic-board.glb',
+}
+
+const BOARD_MODEL_SCALE = {
+  pink:     9.2,
+  historic: 7.5,
+}
+
 let boardGroup = null
 const squareMeshes = {} // key: "a1" → mesh
 
@@ -47,6 +63,12 @@ const squareMeshes = {} // key: "a1" → mesh
 let lightMaterial = null
 let darkMaterial  = null
 let baseMaterial  = null
+let edgeMaterial  = null
+
+// GLB board state
+let glbBoardMesh      = null
+let _boardLoadId      = 0
+let _proceduralHidden = false
 
 /**
  * Convert chess square ("a1") to (col, row) [0-7]
@@ -98,12 +120,12 @@ export function createBoard(scene, boardStyle = 'wood') {
 
   // Edge trim
   const edgeGeo = new THREE.BoxGeometry(8.6, 0.05, 8.6)
-  const edgeMat = new THREE.MeshStandardMaterial({
+  edgeMaterial = new THREE.MeshStandardMaterial({
     color: '#C8A96E',
     roughness: 0.75,
     metalness: 0.1
   })
-  const edge = new THREE.Mesh(edgeGeo, edgeMat)
+  const edge = new THREE.Mesh(edgeGeo, edgeMaterial)
   edge.position.set(0, -0.025, 0)
   edge.receiveShadow = true
   boardGroup.add(edge)
@@ -176,6 +198,93 @@ export function updateBoardStyle(scene, boardStyle) {
     baseMaterial.color.set(style.base)
     baseMaterial.needsUpdate = true
   }
+}
+
+// ─── GLB Board ────────────────────────────────────────────────────────────────
+
+function hideProceduralBoard() {
+  _proceduralHidden = true
+  for (const mat of [lightMaterial, darkMaterial, baseMaterial, edgeMaterial]) {
+    if (!mat) continue
+    mat.transparent = true
+    mat.opacity     = 0
+    mat.depthWrite  = false
+    mat.needsUpdate = true
+  }
+}
+
+function restoreProceduralBoard() {
+  if (!_proceduralHidden) return
+  _proceduralHidden = false
+  for (const mat of [lightMaterial, darkMaterial, baseMaterial, edgeMaterial]) {
+    if (!mat) continue
+    mat.transparent = false
+    mat.opacity     = 1
+    mat.depthWrite  = true
+    mat.needsUpdate = true
+  }
+}
+
+export function setBoardModel(modelId) {
+  // Remove existing GLB board
+  if (glbBoardMesh && boardGroup) {
+    boardGroup.remove(glbBoardMesh)
+    glbBoardMesh.traverse(c => {
+      if (c.isMesh) {
+        c.geometry.dispose()
+        ;(Array.isArray(c.material) ? c.material : [c.material]).forEach(m => m.dispose())
+      }
+    })
+    glbBoardMesh = null
+  }
+
+  if (!modelId) {
+    _boardLoadId++ // cancel any in-flight GLB load
+    restoreProceduralBoard()
+    markDirty(4)
+    return
+  }
+
+  const url = BOARD_MODELS[modelId]
+  if (!url || !boardGroup) return
+
+  const loadId = ++_boardLoadId
+  const loader = new GLTFLoader()
+  loader.setDRACOLoader(_dracoLoader)
+  loader.load(
+    url,
+    (gltf) => {
+      if (loadId !== _boardLoadId || !boardGroup) return
+
+      const model = gltf.scene
+
+      // Normalize GLB orientation — Blender sometimes exports with 180° Y offset
+      model.rotation.y = Math.PI
+
+      // Scale so GLB board's inner playing area aligns with the 8-unit piece grid.
+      // 10.0 accounts for the decorative frame on the pink board (frame ≈ 10% each side).
+      const box = new THREE.Box3().setFromObject(model)
+      const size = box.getSize(new THREE.Vector3())
+      const maxDim = Math.max(size.x, size.z)
+      const targetScale = BOARD_MODEL_SCALE[modelId] ?? 9.2
+      if (maxDim > 0) model.scale.setScalar(targetScale / maxDim)
+
+      // Center X/Z, sit base on y = -0.15 (same as procedural base)
+      const box2 = new THREE.Box3().setFromObject(model)
+      const center = box2.getCenter(new THREE.Vector3())
+      model.position.set(-center.x, -box2.max.y, -center.z)
+
+      model.name = 'glbBoard'
+      model.traverse(c => { if (c.isMesh) c.receiveShadow = true })
+
+      hideProceduralBoard()
+      boardGroup.add(model)
+      glbBoardMesh = model
+      markDirty(4)
+    },
+    undefined,
+    (err) => console.warn('Failed to load board model:', err)
+  )
 }
 
 export function getSquareMesh(square) {
@@ -289,6 +398,10 @@ export function disposeBoard(scene) {
   lightMaterial = null
   darkMaterial  = null
   baseMaterial  = null
+  edgeMaterial      = null
+  glbBoardMesh      = null
+  _proceduralHidden = false
+  _boardLoadId++
 
   // Clear the square mesh index
   Object.keys(squareMeshes).forEach(k => delete squareMeshes[k])
