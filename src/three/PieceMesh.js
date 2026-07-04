@@ -163,6 +163,33 @@ export function preloadModels() {
   ])
 }
 
+// ─── Vic set ──────────────────────────────────────────────────────────────────
+const VIC_GLB_MAP = {
+  pw: '/models/vic/pawn_white.glb',
+  pb: '/models/vic/pawn_black.glb',
+  bw: '/models/vic/bishop_white.glb',
+  bb: '/models/vic/bishop_black.glb',
+  nw: '/models/vic/knight_white.glb',
+  nb: '/models/vic/knight_black.glb',
+  rw: '/models/vic/rook_white.glb',
+  rb: '/models/vic/rook_black.glb',
+  qw: '/models/vic/queen_white.glb',
+  qb: '/models/vic/queen_black.glb',
+  kw: '/models/vic/king_white.glb',
+  kb: '/models/vic/king_black.glb',
+}
+const VIC_MODEL_CACHE = {}
+const VIC_SIZE = { p: 0.70, r: 1.05, n: 1.05, b: 1.05, q: 1.10, k: 1.15 }
+
+let vicLoadPromise = null
+export function preloadVicModels() {
+  if (vicLoadPromise) return vicLoadPromise
+  vicLoadPromise = Promise.all(
+    Object.entries(VIC_GLB_MAP).map(([k, url]) => loadOne(k, url, VIC_MODEL_CACHE))
+  )
+  return vicLoadPromise
+}
+
 // ─── Steampunk1 set ───────────────────────────────────────────────────────────
 const STEAMPUNK1_GLB_MAP = {
   p: '/models/steampunk1/pawn.glb',
@@ -871,6 +898,50 @@ function createSteampunk1Piece(type, color, square, scene) {
   return pivot
 }
 
+// ─── Vic set piece builder ────────────────────────────────────────────────────
+
+function createVicPiece(type, color, square, scene) {
+  const t = type.toLowerCase()
+  const suffix = color === 'white' ? 'w' : 'b'
+  const cacheKey = t + suffix
+  const template = VIC_MODEL_CACHE[cacheKey]
+  if (!template) {
+    preloadVicModels()
+    return createClassicPiece(type, color, square, scene)
+  }
+
+  const inner = template.clone(true)
+  inner.traverse(child => {
+    if (child.isMesh) {
+      child.castShadow = true
+      child.receiveShadow = true
+    }
+  })
+
+  const box = new THREE.Box3().setFromObject(inner)
+  const height = box.max.y - box.min.y
+  const normalizedScale = height > 0 ? 1.0 / height : 1
+  const sizeMultiplier = VIC_SIZE[t] ?? 1
+  inner.scale.setScalar(normalizedScale * sizeMultiplier)
+
+  const box2 = new THREE.Box3().setFromObject(inner)
+  const center = box2.getCenter(new THREE.Vector3())
+  inner.position.set(-center.x, -box2.min.y, -center.z)
+
+  const pivot = new THREE.Group()
+  pivot.add(inner)
+
+  const pos = squareToWorld(square)
+  pivot.position.set(pos.x, 0, pos.z)
+  pivot.rotation.y = color === 'white' ? Math.PI : 0
+
+  pivot.userData = { pieceType: t, color, square, normalizedScale: 1, baseY: 0 }
+  pivot.name = `piece_${type}_${color}_${square}`
+
+  scene.add(pivot)
+  return pivot
+}
+
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 /**
@@ -889,6 +960,7 @@ export function createPiece(type, color, square, scene, style = 'classic') {
     case 'hi':      return createHiPiece(type, color, square, scene)
     case 'ok':         return createOkPiece(type, color, square, scene)
     case 'steampunk1': return createSteampunk1Piece(type, color, square, scene)
+    case 'vic':        return createVicPiece(type, color, square, scene)
     case 'symbol':  return createSymbolPiece(type, color, square, scene)
     case 'lowpoly': return createLowPolyPiece(type, color, square, scene)
     default:        return createClassicPiece(type, color, square, scene)

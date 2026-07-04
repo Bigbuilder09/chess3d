@@ -509,6 +509,7 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
                     { id: 'glb',   label: 'GLB',   desc: '3D model' },
                     { id: 'retro', label: 'Retro', desc: '3D retro' },
                     { id: 'ok',    label: 'OK',    desc: 'Hi twins' },
+                    { id: 'vic',   label: 'Vic',   desc: 'Victorian' },
                   ].map(s => (
                     <button
                       key={s.id}
