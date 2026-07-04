@@ -580,6 +580,8 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
                     { id: '/bg/golden-smoke.jpg', label: 'Nebula' },
                     { id: '/bg/galaxy1.jpg',      label: 'Galaxy I' },
                     { id: '/bg/galaxy2.jpg',      label: 'Galaxy II' },
+                    { id: '/bg/ball-room.jpg',    label: 'Ballroom' },
+                    { id: '/bg/hall-way.jpg',     label: 'Hall Way' },
                   ].map(bg => (
                     <button
                       key={bg.id ?? 'none'}
