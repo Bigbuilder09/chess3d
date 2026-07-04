@@ -58,6 +58,11 @@ const BOARD_MODEL_SCALE = {
   vic:      10.0,
 }
 
+// Extra X rotation (radians) for models exported upright from Blender
+const BOARD_MODEL_ROT_X = {
+  vic: -Math.PI / 2,
+}
+
 let boardGroup = null
 const squareMeshes = {} // key: "a1" → mesh
 
@@ -262,6 +267,7 @@ export function setBoardModel(modelId) {
 
       // Normalize GLB orientation — Blender sometimes exports with 180° Y offset
       model.rotation.y = Math.PI
+      if (BOARD_MODEL_ROT_X[modelId]) model.rotation.x = BOARD_MODEL_ROT_X[modelId]
 
       // Scale so GLB board's inner playing area aligns with the 8-unit piece grid.
       // 10.0 accounts for the decorative frame on the pink board (frame ≈ 10% each side).
