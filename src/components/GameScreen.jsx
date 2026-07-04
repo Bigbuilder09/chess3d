@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom'
 import * as THREE from 'three'
 import { initScene, renderScene, disposeScene, getScene, getCamera, markDirty, shouldRender, setSceneBg } from '../three/ChessScene.js'
 import { createBoard, squareToWorld, worldToSquare, highlightSquare, clearAllHighlights, showLegalDots, clearLegalDots, getBoardGroup, updateBoardStyle, setBoardModel } from '../three/BoardMesh.js'
-import { createPiece, movePiece, removePiece, selectPiece, deselectPiece, rebuildPieces, buildPiecesFromBoard, clearAllPieces, preloadModels, preloadHiModels, updateRGBPieces, clearRGBRegistry } from '../three/PieceMesh.js'
+import { createPiece, movePiece, removePiece, selectPiece, deselectPiece, rebuildPieces, buildPiecesFromBoard, clearAllPieces, preloadModels, preloadHiModels, preloadVicModels, updateRGBPieces, clearRGBRegistry } from '../three/PieceMesh.js'
 import { initControls, updateControls, disposeControls, flipCamera } from '../three/CameraController.js'
 import { playCaptureEffect, playCheckEffect, clearCheckEffect, playCheckmateEffect } from '../three/CaptureEffect.js'
 import { playMoveSound, playCaptureSound, playQueenCaptureSound, playCheckSound, playCheckmateSound, playGameEndSound } from '../audio/sounds.js'
@@ -200,6 +200,13 @@ export default function GameScreen({ setGameResult, playerInfo, settings, setSet
           markDirty()
         })
         .catch(err => console.warn('Hi model preload failed:', err))
+    } else if (settings.pieceStyle === 'vic') {
+      preloadVicModels()
+        .then(() => {
+          if (sceneRef.current) rebuildPieces(sceneRef.current, pieceMapRef.current, 'vic')
+          markDirty()
+        })
+        .catch(err => console.warn('Vic model preload failed:', err))
     } else {
       rebuildPieces(sceneRef.current, pieceMapRef.current, settings.pieceStyle)
       markDirty()
