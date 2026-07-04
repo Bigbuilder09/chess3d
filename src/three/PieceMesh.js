@@ -179,7 +179,7 @@ const VIC_GLB_MAP = {
   kb: '/models/vic/king_black.glb',
 }
 const VIC_MODEL_CACHE = {}
-const VIC_SIZE = { p: 0.70, r: 1.05, n: 1.05, b: 1.05, q: 1.10, k: 1.15 }
+const VIC_SIZE = { p: 0.91, r: 1.37, n: 1.37, b: 1.37, q: 1.43, k: 1.50 }
 
 let vicLoadPromise = null
 export function preloadVicModels() {
