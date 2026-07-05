@@ -183,6 +183,7 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
     const controls = controlsRef.current
     const map = pieceMapRef.current
     const { from, to, captured, flags, promotion, san } = moveResult
+    const movedColor = moveResult.color === 'w' ? 'white' : 'black'
 
     const data = {
       from, to, san,
@@ -228,7 +229,6 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
 
     // Castling
     if (flags?.includes('k') || flags?.includes('q')) {
-      const movedColor = chess.turn() === 'b' ? 'white' : 'black'
       const isKingside = flags.includes('k')
       const rookFrom = isKingside ? (movedColor==='white'?'h1':'h8') : (movedColor==='white'?'a1':'a8')
       const rookTo   = isKingside ? (movedColor==='white'?'f1':'f8') : (movedColor==='white'?'d1':'d8')
@@ -256,7 +256,6 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
         })
         delete map[to]
       }
-      const movedColor = chess.turn() === 'b' ? 'white' : 'black'
       const newPiece = createPiece(promotion, movedColor, to, scene, settingsRef.current.pieceStyle)
       if (newPiece) { newPiece.userData.square = to; map[to] = newPiece }
     }
