@@ -234,8 +234,8 @@ const CHINESE_MODEL_CACHE = {}
 const CHINESE_SIZE = { r: 1.2, n: 1.2, b: 1.2, q: 1.3, k: 1.3 }
 
 const CHINESE_WHITE_MAT = () => new THREE.MeshPhysicalMaterial({
-  color: '#8B2500', roughness: 0.38, metalness: 0.05,
-  clearcoat: 0.4, clearcoatRoughness: 0.18,
+  color: '#6B3020', roughness: 0.40, metalness: 0.05,
+  clearcoat: 0.35, clearcoatRoughness: 0.20,
 })
 const CHINESE_BLACK_MAT = () => new THREE.MeshPhysicalMaterial({
   color: '#BF932A', roughness: 0.25, metalness: 0.20,
