@@ -47,15 +47,17 @@ const BOARD_STYLES = {
 }
 
 const BOARD_MODELS = {
-  pink:     '/boards/pink-board.glb',
-  historic: '/boards/historic-board.glb',
-  vic:      '/boards/vic-board.glb',
+  pink:    '/boards/pink-board.glb',
+  historic:'/boards/historic-board.glb',
+  vic:     '/boards/vic-board.glb',
+  chinese: '/boards/chinese-board.glb',
 }
 
 const BOARD_MODEL_SCALE = {
   pink:     9.2,
   historic: 10.2,
   vic:      10.2,
+  chinese:  10.2,
 }
 
 // Extra X rotation (radians) for models exported upright from Blender

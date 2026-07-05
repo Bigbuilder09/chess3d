@@ -753,6 +753,7 @@ export default function GameScreen({ setGameResult, playerInfo, settings, setSet
                     { id: 'pink',     label: 'Pink' },
                     { id: 'historic', label: 'Historic' },
                     { id: 'vic',      label: 'Vic' },
+                    { id: 'chinese',  label: 'Chinese' },
                   ].map(bm => (
                     <button
                       key={bm.id ?? 'default'}
