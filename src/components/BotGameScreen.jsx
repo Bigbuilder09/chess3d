@@ -4,7 +4,7 @@ import * as THREE from 'three'
 import { Chess } from 'chess.js'
 import { initScene, renderScene, disposeScene, markDirty, shouldRender, setSceneBg } from '../three/ChessScene.js'
 import { createBoard, highlightSquare, clearAllHighlights, showLegalDots, clearLegalDots, getBoardGroup, updateBoardStyle, setBoardModel } from '../three/BoardMesh.js'
-import { createPiece, movePiece, removePiece, selectPiece, deselectPiece, rebuildPieces, preloadModels, preloadHiModels, preloadVicModels, updateRGBPieces, clearRGBRegistry } from '../three/PieceMesh.js'
+import { createPiece, movePiece, removePiece, selectPiece, deselectPiece, rebuildPieces, preloadModels, preloadHiModels, preloadVicModels, preloadChineseModels, updateRGBPieces, clearRGBRegistry } from '../three/PieceMesh.js'
 import { initControls, updateControls, disposeControls } from '../three/CameraController.js'
 import { playCaptureEffect, playCheckEffect, clearCheckEffect, playCheckmateEffect } from '../three/CaptureEffect.js'
 import { playMoveSound, playCaptureSound, playQueenCaptureSound, playCheckSound, playCheckmateSound, playGameEndSound } from '../audio/sounds.js'
@@ -159,6 +159,13 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
           markDirty()
         })
         .catch(err => console.warn('Vic model preload failed:', err))
+    } else if (settings.pieceStyle === 'chinese') {
+      preloadChineseModels()
+        .then(() => {
+          if (sceneRef.current) rebuildPieces(sceneRef.current, pieceMapRef.current, 'chinese')
+          markDirty()
+        })
+        .catch(err => console.warn('Chinese model preload failed:', err))
     } else {
       rebuildPieces(sceneRef.current, pieceMapRef.current, settings.pieceStyle)
       markDirty()
@@ -512,10 +519,11 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
                 <p className="text-ivory font-inter text-xs mb-2">Piece Style</p>
                 <div className="flex flex-wrap gap-2 mb-3">
                   {[
-                    { id: 'glb',   label: 'GLB',   desc: '3D model' },
-                    { id: 'retro', label: 'Retro', desc: '3D retro' },
-                    { id: 'ok',    label: 'OK',    desc: 'Hi twins' },
-                    { id: 'vic',   label: 'Vic',   desc: 'Victorian' },
+                    { id: 'glb',     label: 'GLB',     desc: '3D model' },
+                    { id: 'retro',   label: 'Retro',   desc: '3D retro' },
+                    { id: 'ok',      label: 'OK',      desc: 'Hi twins' },
+                    { id: 'vic',     label: 'Vic',     desc: 'Victorian' },
+                    { id: 'chinese', label: 'Chinese', desc: 'Oriental' },
                   ].map(s => (
                     <button
                       key={s.id}

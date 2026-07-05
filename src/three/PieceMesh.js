@@ -221,6 +221,36 @@ export function preloadSteampunk1Models() {
   return steampunk1LoadPromise
 }
 
+// ─── Chinese set ───────────────────────────────────────────────────────────────
+const CHINESE_GLB_MAP = {
+  p: '/models/chinese/pawn.glb',
+  r: '/models/chinese/rook.glb',
+  n: '/models/chinese/knight.glb',
+  b: '/models/chinese/bishop.glb',
+  q: '/models/chinese/queen.glb',
+  k: '/models/chinese/king.glb',
+}
+const CHINESE_MODEL_CACHE = {}
+const CHINESE_SIZE = { r: 1.2, n: 1.2, b: 1.2, q: 1.3, k: 1.3 }
+
+const CHINESE_WHITE_MAT = () => new THREE.MeshPhysicalMaterial({
+  color: '#F0E0B0', roughness: 0.30, metalness: 0.10,
+  clearcoat: 0.5, clearcoatRoughness: 0.15,
+})
+const CHINESE_BLACK_MAT = () => new THREE.MeshPhysicalMaterial({
+  color: '#8B1A1A', roughness: 0.25, metalness: 0.15,
+  clearcoat: 0.6, clearcoatRoughness: 0.10,
+})
+
+let chineseLoadPromise = null
+export function preloadChineseModels() {
+  if (chineseLoadPromise) return chineseLoadPromise
+  chineseLoadPromise = Promise.all(
+    Object.entries(CHINESE_GLB_MAP).map(([t, url]) => loadOne(t, url, CHINESE_MODEL_CACHE))
+  )
+  return chineseLoadPromise
+}
+
 // Lazy-load hi set only when user selects it
 let hiLoadPromise = null
 export function preloadHiModels() {
@@ -898,6 +928,51 @@ function createSteampunk1Piece(type, color, square, scene) {
   return pivot
 }
 
+// ─── Chinese set piece builder ────────────────────────────────────────────────
+
+function createChinesePiece(type, color, square, scene) {
+  const t = type.toLowerCase()
+  const template = CHINESE_MODEL_CACHE[t]
+  if (!template) {
+    preloadChineseModels()
+    return createClassicPiece(type, color, square, scene)
+  }
+
+  const mat = color === 'white' ? CHINESE_WHITE_MAT() : CHINESE_BLACK_MAT()
+  const inner = template.clone(true)
+
+  inner.traverse(child => {
+    if (child.isMesh) {
+      child.material = mat
+      child.castShadow = true
+      child.receiveShadow = true
+    }
+  })
+
+  const box = new THREE.Box3().setFromObject(inner)
+  const height = box.max.y - box.min.y
+  const normalizedScale = height > 0 ? 1.0 / height : 1
+  const sizeMultiplier = CHINESE_SIZE[t] ?? 1
+  inner.scale.setScalar(normalizedScale * sizeMultiplier)
+
+  const box2 = new THREE.Box3().setFromObject(inner)
+  const center = box2.getCenter(new THREE.Vector3())
+  inner.position.set(-center.x, -box2.min.y, -center.z)
+
+  const pivot = new THREE.Group()
+  pivot.add(inner)
+
+  const pos = squareToWorld(square)
+  pivot.position.set(pos.x, 0, pos.z)
+  pivot.rotation.y = color === 'white' ? Math.PI : 0
+
+  pivot.userData = { pieceType: t, color, square, normalizedScale: 1, baseY: 0 }
+  pivot.name = `piece_${type}_${color}_${square}`
+
+  scene.add(pivot)
+  return pivot
+}
+
 // ─── Vic set piece builder ────────────────────────────────────────────────────
 
 function createVicPiece(type, color, square, scene) {
@@ -960,6 +1035,7 @@ export function createPiece(type, color, square, scene, style = 'classic') {
     case 'hi':      return createHiPiece(type, color, square, scene)
     case 'ok':         return createOkPiece(type, color, square, scene)
     case 'steampunk1': return createSteampunk1Piece(type, color, square, scene)
+    case 'chinese':    return createChinesePiece(type, color, square, scene)
     case 'vic':        return createVicPiece(type, color, square, scene)
     case 'symbol':  return createSymbolPiece(type, color, square, scene)
     case 'lowpoly': return createLowPolyPiece(type, color, square, scene)
