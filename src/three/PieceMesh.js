@@ -234,12 +234,12 @@ const CHINESE_MODEL_CACHE = {}
 const CHINESE_SIZE = { r: 1.2, n: 1.2, b: 1.2, q: 1.3, k: 1.3 }
 
 const CHINESE_WHITE_MAT = () => new THREE.MeshPhysicalMaterial({
-  color: '#F0E0B0', roughness: 0.30, metalness: 0.10,
-  clearcoat: 0.5, clearcoatRoughness: 0.15,
+  color: '#930A00', roughness: 0.30, metalness: 0.15,
+  clearcoat: 0.6, clearcoatRoughness: 0.12,
 })
 const CHINESE_BLACK_MAT = () => new THREE.MeshPhysicalMaterial({
-  color: '#8B1A1A', roughness: 0.25, metalness: 0.15,
-  clearcoat: 0.6, clearcoatRoughness: 0.10,
+  color: '#BF932A', roughness: 0.25, metalness: 0.20,
+  clearcoat: 0.65, clearcoatRoughness: 0.10,
 })
 
 let chineseLoadPromise = null
