@@ -57,7 +57,7 @@ const BOARD_MODEL_SCALE = {
   pink:     9.2,
   historic: 10.2,
   vic:      10.2,
-  chinese:  10.2,
+  chinese:  9.9,
 }
 
 // Extra X rotation (radians) for models exported upright from Blender
