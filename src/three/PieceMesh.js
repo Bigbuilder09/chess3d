@@ -184,8 +184,10 @@ const CHINESE_P_SIZE = { p: 0.91, r: 1.37, n: 1.37, b: 1.37, q: 1.43, k: 1.50 }
 let chinesePLoadPromise = null
 export function preloadChinesePModels() {
   if (chinesePLoadPromise) return chinesePLoadPromise
-  chinesePLoadPromise = Promise.all(
-    Object.entries(CHINESE_P_GLB_MAP).map(([k, url]) => loadOne(k, url, CHINESE_P_MODEL_CACHE))
+  // Sequential loading to avoid memory spike on mobile (especially iOS Safari)
+  chinesePLoadPromise = Object.entries(CHINESE_P_GLB_MAP).reduce(
+    (chain, [k, url]) => chain.then(() => loadOne(k, url, CHINESE_P_MODEL_CACHE)),
+    Promise.resolve()
   )
   return chinesePLoadPromise
 }
