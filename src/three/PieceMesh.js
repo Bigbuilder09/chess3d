@@ -184,11 +184,13 @@ const CHINESE_P_SIZE = { p: 0.91, r: 1.37, n: 1.37, b: 1.37, q: 1.43, k: 1.50 }
 let chinesePLoadPromise = null
 export function preloadChinesePModels() {
   if (chinesePLoadPromise) return chinesePLoadPromise
-  // Sequential loading to avoid memory spike on mobile (especially iOS Safari)
-  chinesePLoadPromise = Object.entries(CHINESE_P_GLB_MAP).reduce(
-    (chain, [k, url]) => chain.then(() => loadOne(k, url, CHINESE_P_MODEL_CACHE)),
-    Promise.resolve()
-  )
+  // Batch loading: 3 models at a time — fast enough while avoiding iOS memory spike
+  const entries = Object.entries(CHINESE_P_GLB_MAP)
+  chinesePLoadPromise = (async () => {
+    for (let i = 0; i < entries.length; i += 3) {
+      await Promise.all(entries.slice(i, i + 3).map(([k, url]) => loadOne(k, url, CHINESE_P_MODEL_CACHE)))
+    }
+  })()
   return chinesePLoadPromise
 }
 
