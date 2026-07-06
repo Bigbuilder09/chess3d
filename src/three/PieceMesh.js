@@ -163,6 +163,33 @@ export function preloadModels() {
   ])
 }
 
+// ─── Chinese Perfect set ─────────────────────────────────────────────────────
+const CHINESE_P_GLB_MAP = {
+  pw: '/models/chinese_p/pawn_white.glb',
+  pb: '/models/chinese_p/pawn_black.glb',
+  bw: '/models/chinese_p/bishop_white.glb',
+  bb: '/models/chinese_p/bishop_black.glb',
+  nw: '/models/chinese_p/knight_white.glb',
+  nb: '/models/chinese_p/knight_black.glb',
+  rw: '/models/chinese_p/rook_white.glb',
+  rb: '/models/chinese_p/rook_black.glb',
+  qw: '/models/chinese_p/queen_white.glb',
+  qb: '/models/chinese_p/queen_black.glb',
+  kw: '/models/chinese_p/king_white.glb',
+  kb: '/models/chinese_p/king_black.glb',
+}
+const CHINESE_P_MODEL_CACHE = {}
+const CHINESE_P_SIZE = { p: 0.91, r: 1.37, n: 1.37, b: 1.37, q: 1.43, k: 1.50 }
+
+let chinesePLoadPromise = null
+export function preloadChinesePModels() {
+  if (chinesePLoadPromise) return chinesePLoadPromise
+  chinesePLoadPromise = Promise.all(
+    Object.entries(CHINESE_P_GLB_MAP).map(([k, url]) => loadOne(k, url, CHINESE_P_MODEL_CACHE))
+  )
+  return chinesePLoadPromise
+}
+
 // ─── Vic set ──────────────────────────────────────────────────────────────────
 const VIC_GLB_MAP = {
   pw: '/models/vic/pawn_white.glb',
@@ -973,6 +1000,50 @@ function createChinesePiece(type, color, square, scene) {
   return pivot
 }
 
+// ─── Chinese Perfect set piece builder ───────────────────────────────────────
+
+function createChinesePPiece(type, color, square, scene) {
+  const t = type.toLowerCase()
+  const suffix = color === 'white' ? 'w' : 'b'
+  const cacheKey = t + suffix
+  const template = CHINESE_P_MODEL_CACHE[cacheKey]
+  if (!template) {
+    preloadChinesePModels()
+    return createClassicPiece(type, color, square, scene)
+  }
+
+  const inner = template.clone(true)
+  inner.traverse(child => {
+    if (child.isMesh) {
+      child.castShadow = true
+      child.receiveShadow = true
+    }
+  })
+
+  const box = new THREE.Box3().setFromObject(inner)
+  const height = box.max.y - box.min.y
+  const normalizedScale = height > 0 ? 1.0 / height : 1
+  const sizeMultiplier = CHINESE_P_SIZE[t] ?? 1
+  inner.scale.setScalar(normalizedScale * sizeMultiplier)
+
+  const box2 = new THREE.Box3().setFromObject(inner)
+  const center = box2.getCenter(new THREE.Vector3())
+  inner.position.set(-center.x, -box2.min.y, -center.z)
+
+  const pivot = new THREE.Group()
+  pivot.add(inner)
+
+  const pos = squareToWorld(square)
+  pivot.position.set(pos.x, 0, pos.z)
+  pivot.rotation.y = color === 'white' ? Math.PI : 0
+
+  pivot.userData = { pieceType: t, color, square, normalizedScale: 1, baseY: 0 }
+  pivot.name = `piece_${type}_${color}_${square}`
+
+  scene.add(pivot)
+  return pivot
+}
+
 // ─── Vic set piece builder ────────────────────────────────────────────────────
 
 function createVicPiece(type, color, square, scene) {
@@ -1036,6 +1107,7 @@ export function createPiece(type, color, square, scene, style = 'classic') {
     case 'ok':         return createOkPiece(type, color, square, scene)
     case 'steampunk1': return createSteampunk1Piece(type, color, square, scene)
     case 'chinese':    return createChinesePiece(type, color, square, scene)
+    case 'chinese_p':  return createChinesePPiece(type, color, square, scene)
     case 'vic':        return createVicPiece(type, color, square, scene)
     case 'symbol':  return createSymbolPiece(type, color, square, scene)
     case 'lowpoly': return createLowPolyPiece(type, color, square, scene)
