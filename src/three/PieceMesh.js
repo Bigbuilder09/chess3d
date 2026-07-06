@@ -1017,8 +1017,11 @@ function createChinesePPiece(type, color, square, scene) {
   }
 
   const inner = template.clone(true)
+  const redTint = new THREE.Color(0.70, 0.92, 0.92)
   inner.traverse(child => {
     if (child.isMesh) {
+      const mats = Array.isArray(child.material) ? child.material : [child.material]
+      mats.forEach(mat => mat.color.multiply(redTint))
       child.castShadow = true
       child.receiveShadow = true
     }
