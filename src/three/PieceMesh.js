@@ -1017,8 +1017,16 @@ function createChinesePPiece(type, color, square, scene) {
   }
 
   const inner = template.clone(true)
+  const _hsl = {}
   inner.traverse(child => {
     if (child.isMesh) {
+      const mats = Array.isArray(child.material) ? child.material : [child.material]
+      mats.forEach(mat => {
+        if (mat.color) {
+          mat.color.getHSL(_hsl)
+          mat.color.setHSL(_hsl.h, _hsl.s * 0.55, _hsl.l)
+        }
+      })
       child.castShadow = true
       child.receiveShadow = true
     }
