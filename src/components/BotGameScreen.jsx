@@ -5,6 +5,7 @@ import { Chess } from 'chess.js'
 import { initScene, renderScene, disposeScene, markDirty, shouldRender, setSceneBg } from '../three/ChessScene.js'
 import { createBoard, highlightSquare, clearAllHighlights, showLegalDots, clearLegalDots, getBoardGroup, updateBoardStyle, setBoardModel } from '../three/BoardMesh.js'
 import { createPiece, movePiece, removePiece, selectPiece, deselectPiece, rebuildPieces, preloadModels, preloadHiModels, preloadVicModels, preloadChineseModels, preloadChinesePModels, updateRGBPieces, clearRGBRegistry } from '../three/PieceMesh.js'
+import { gsap } from 'gsap'
 import { initControls, updateControls, disposeControls } from '../three/CameraController.js'
 import { playCaptureEffect, playCheckEffect, clearCheckEffect, playCheckmateEffect } from '../three/CaptureEffect.js'
 import { playMoveSound, playCaptureSound, playQueenCaptureSound, playCheckSound, playCheckmateSound, playGameEndSound } from '../audio/sounds.js'
@@ -80,7 +81,6 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
     const canvas = canvasRef.current
     if (!canvas) return
 
-    let rafId
     let loopActive = true
 
     const onVisibilityChange = () => {
@@ -89,18 +89,17 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
       } else {
         loopActive = true
         markDirty(4)
-        loop()  // eslint-disable-line no-use-before-define
       }
     }
     document.addEventListener('visibilitychange', onVisibilityChange)
 
-    function loop() {
+    const tick = () => {
       if (!loopActive) return
-      rafId = requestAnimationFrame(loop)
       updateControls()
-      if (updateRGBPieces()) markDirty()
+      if (updateRGBPieces()) markDirty(1)
       if (shouldRender()) renderScene()
     }
+    gsap.ticker.add(tick)
 
     async function init() {
       const { scene, camera } = initScene(canvas)
@@ -118,16 +117,13 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
       pieceMapRef.current = initBoardPieces(scene, settings.pieceStyle)
       controlsRef.current = initControls(camera, { domElement: canvas })
       setSceneBg(settings.bgImage ?? null)
-
-      loop()
-      animFrameRef.current = rafId
     }
 
     init()
 
     return () => {
       loopActive = false
-      cancelAnimationFrame(rafId)
+      gsap.ticker.remove(tick)
       document.removeEventListener('visibilitychange', onVisibilityChange)
       clearRGBRegistry()
       disposeControls()

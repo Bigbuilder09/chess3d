@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { gsap } from 'gsap'
-import { markDirty, beginAnimation, endAnimation } from './ChessScene.js'
+import { markDirty } from './ChessScene.js'
 
 let controls = null
 let dblclickHandler = null
@@ -40,24 +40,21 @@ export function initControls(camera, renderer) {
 export function resetCamera(camera) {
   if (!controls) return
 
-  beginAnimation()
   gsap.to(camera.position, {
     x: DEFAULT_POSITION.x,
     y: DEFAULT_POSITION.y,
     z: DEFAULT_POSITION.z,
     duration: 0.4,
     ease: 'power2.inOut',
-    onComplete: endAnimation
+    onUpdate: () => markDirty(1)
   })
-  beginAnimation()
   gsap.to(controls.target, {
     x: DEFAULT_TARGET.x,
     y: DEFAULT_TARGET.y,
     z: DEFAULT_TARGET.z,
     duration: 0.4,
     ease: 'power2.inOut',
-    onUpdate: () => controls.update(),
-    onComplete: endAnimation
+    onUpdate: () => { controls.update(); markDirty(1) }
   })
 }
 
@@ -67,22 +64,19 @@ export function resetCamera(camera) {
 export function flipCamera(camera) {
   if (!controls) return
 
-  beginAnimation()
   gsap.to(camera.position, {
     x: 0,
     y: 8,
     z: -10,
     duration: 0.6,
     ease: 'power2.inOut',
-    onComplete: endAnimation
+    onUpdate: () => markDirty(1)
   })
-  beginAnimation()
   gsap.to(controls.target, {
     x: 0, y: 0, z: 0,
     duration: 0.6,
     ease: 'power2.inOut',
-    onUpdate: () => controls.update(),
-    onComplete: endAnimation
+    onUpdate: () => { controls.update(); markDirty(1) }
   })
 }
 

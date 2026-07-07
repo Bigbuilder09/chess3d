@@ -7,17 +7,12 @@ let scene, camera, renderer, composer
 let dirLight, ambientLight
 let _dirtyFrames = 0
 let _bgLoadId = 0
-let _activeAnimations = 0
 
 export function markDirty(frames = 2) {
   _dirtyFrames = Math.max(_dirtyFrames, frames)
 }
 
-export function beginAnimation() { _activeAnimations++ }
-export function endAnimation()   { _activeAnimations = Math.max(0, _activeAnimations - 1) }
-
 export function shouldRender() {
-  if (_activeAnimations > 0) return true
   if (_dirtyFrames > 0) { _dirtyFrames--; return true }
   return false
 }
@@ -177,7 +172,6 @@ export function renderScene() {
 
 export function disposeScene() {
   _bgLoadId++
-  _activeAnimations = 0
   if (scene?.userData._cleanupResize) {
     window.removeEventListener('resize', scene.userData._cleanupResize)
   }

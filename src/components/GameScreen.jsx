@@ -6,6 +6,7 @@ import * as THREE from 'three'
 import { initScene, renderScene, disposeScene, getScene, getCamera, markDirty, shouldRender, setSceneBg } from '../three/ChessScene.js'
 import { createBoard, squareToWorld, worldToSquare, highlightSquare, clearAllHighlights, showLegalDots, clearLegalDots, getBoardGroup, updateBoardStyle, setBoardModel } from '../three/BoardMesh.js'
 import { createPiece, movePiece, removePiece, selectPiece, deselectPiece, rebuildPieces, buildPiecesFromBoard, clearAllPieces, preloadModels, preloadHiModels, preloadVicModels, preloadChineseModels, preloadChinesePModels, updateRGBPieces, clearRGBRegistry } from '../three/PieceMesh.js'
+import { gsap } from 'gsap'
 import { initControls, updateControls, disposeControls, flipCamera } from '../three/CameraController.js'
 import { playCaptureEffect, playCheckEffect, clearCheckEffect, playCheckmateEffect } from '../three/CaptureEffect.js'
 import { playMoveSound, playCaptureSound, playQueenCaptureSound, playCheckSound, playCheckmateSound, playGameEndSound } from '../audio/sounds.js'
@@ -122,7 +123,6 @@ export default function GameScreen({ setGameResult, playerInfo, settings, setSet
     const canvas = canvasRef.current
     if (!canvas) return
 
-    let rafId
     let loopActive = true
 
     const onVisibilityChange = () => {
@@ -131,18 +131,17 @@ export default function GameScreen({ setGameResult, playerInfo, settings, setSet
       } else {
         loopActive = true
         markDirty(4)
-        loop()  // eslint-disable-line no-use-before-define
       }
     }
     document.addEventListener('visibilitychange', onVisibilityChange)
 
-    function loop() {
+    const tick = () => {
       if (!loopActive) return
-      rafId = requestAnimationFrame(loop)
       updateControls()
-      if (updateRGBPieces()) markDirty()
+      if (updateRGBPieces()) markDirty(1)
       if (shouldRender()) renderScene()
     }
+    gsap.ticker.add(tick)
 
     async function init() {
       const { scene, camera } = initScene(canvas)
@@ -166,16 +165,13 @@ export default function GameScreen({ setGameResult, playerInfo, settings, setSet
         camera.position.set(0, 8, -10)
         camera.lookAt(0, 0, 0)
       }
-
-      loop()
-      animFrameRef.current = rafId
     }
 
     init()
 
     return () => {
       loopActive = false
-      cancelAnimationFrame(rafId)
+      gsap.ticker.remove(tick)
       document.removeEventListener('visibilitychange', onVisibilityChange)
       clearRGBRegistry()
       disposeControls()
