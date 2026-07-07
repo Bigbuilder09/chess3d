@@ -3,7 +3,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js'
 import { gsap } from 'gsap'
 import { squareToWorld } from './BoardMesh.js'
-import { markDirty } from './ChessScene.js'
+import { markDirty, beginAnimation, endAnimation } from './ChessScene.js'
 
 // ─── RGB animation registry ────────────────────────────────────────────────────
 const _rgbGroups = new Map()
@@ -1199,8 +1199,11 @@ export function movePiece(piece, toSquare, duration = 0.4) {
   const dist = current.distanceTo(target)
   const arcHeight = Math.max(0.8, dist * 0.3)
 
+  beginAnimation()
   return new Promise(resolve => {
-    gsap.timeline({ onComplete: resolve, onUpdate: () => markDirty() })
+    gsap.timeline({
+      onComplete: () => { endAnimation(); resolve() }
+    })
       .to(piece.position, {
         x: target.x,
         y: current.y + arcHeight,
@@ -1223,13 +1226,14 @@ export function movePiece(piece, toSquare, duration = 0.4) {
  */
 export function removePiece(piece, scene) {
   unregisterRGBPiece(piece)
+  beginAnimation()
   return new Promise(resolve => {
     gsap.to(piece.scale, {
       x: 0, y: 0, z: 0,
       duration: 0.2,
       ease: 'power2.in',
-      onUpdate: () => markDirty(),
       onComplete: () => {
+        endAnimation()
         scene.remove(piece)
         piece.traverse(child => {
           if (child.isMesh) {
@@ -1252,11 +1256,12 @@ export function removePiece(piece, scene) {
  */
 export function selectPiece(piece) {
   const s = piece.userData.normalizedScale || 1
+  beginAnimation()
   gsap.to(piece.scale, {
     x: s * 1.12, y: s * 1.12, z: s * 1.12,
     duration: 0.2,
     ease: 'back.out(2)',
-    onUpdate: () => markDirty()
+    onComplete: endAnimation
   })
 }
 
@@ -1265,10 +1270,11 @@ export function selectPiece(piece) {
  */
 export function deselectPiece(piece) {
   const s = piece.userData.normalizedScale || 1
+  beginAnimation()
   gsap.to(piece.scale, {
     x: s, y: s, z: s,
     duration: 0.2,
     ease: 'power2.out',
-    onUpdate: () => markDirty()
+    onComplete: endAnimation
   })
 }
