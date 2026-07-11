@@ -94,7 +94,7 @@ const FUN_GLB_MAP = {
 const FUN_MODEL_CACHE = {}
 
 const WHITE_MAT_FUN = () => new THREE.MeshPhysicalMaterial({ color: '#EFEFEF', roughness: 0.18, metalness: 0.12, clearcoat: 0.9, clearcoatRoughness: 0.08 })
-const BLACK_MAT_FUN  = () => new THREE.MeshPhysicalMaterial({ color: '#0D0D0D', roughness: 0.22, metalness: 0.50, clearcoat: 0.8, clearcoatRoughness: 0.10 })
+const BLACK_MAT_FUN  = () => new THREE.MeshPhysicalMaterial({ color: '#0D0D0D', roughness: 0.22, metalness: 0.15, clearcoat: 0.8, clearcoatRoughness: 0.10 })
 const PINK_MAT_FUN   = () => new THREE.MeshPhysicalMaterial({ color: '#D63A6A', roughness: 0.20, metalness: 0.25, clearcoat: 0.85, clearcoatRoughness: 0.08 })
 
 const FUN_WHITE_MATS = { p: WHITE_MAT_FUN, b: WHITE_MAT_FUN, q: WHITE_MAT_FUN, k: WHITE_MAT_FUN, r: WHITE_MAT_FUN, n: WHITE_MAT_FUN }
@@ -127,19 +127,19 @@ const HI_PINK_MODEL_CACHE = {}
 
 // Black side: Obsidian Black body + Antique Gold glow
 const HI_BLACK_MAT = () => new THREE.MeshPhysicalMaterial({
-  color: '#1A1A1A', roughness: 0.18, metalness: 0.70,
+  color: '#1A1A1A', roughness: 0.18, metalness: 0.15,
   clearcoat: 0.9, clearcoatRoughness: 0.06,
   emissive: new THREE.Color('#C5A059'), emissiveIntensity: 0.28,
 })
 // White side A: Electric Blue body + cyan glow
 const HI_WHITE_MAT_A = () => new THREE.MeshPhysicalMaterial({
-  color: '#003399', roughness: 0.15, metalness: 0.60,
+  color: '#003399', roughness: 0.15, metalness: 0.15,
   clearcoat: 1.0, clearcoatRoughness: 0.05,
   emissive: new THREE.Color('#00F2FF'), emissiveIntensity: 0.45,
 })
 // White side B: Magenta Pink body + hot-pink glow
 const HI_WHITE_MAT_B = () => new THREE.MeshPhysicalMaterial({
-  color: '#800040', roughness: 0.15, metalness: 0.60,
+  color: '#800040', roughness: 0.15, metalness: 0.15,
   clearcoat: 1.0, clearcoatRoughness: 0.05,
   emissive: new THREE.Color('#FF0080'), emissiveIntensity: 0.45,
 })
@@ -235,11 +235,11 @@ const STEAMPUNK1_SIZE = { r: 1.3, n: 1.3, b: 1.3, q: 1.3, k: 1.3 }
 
 // Copper side (white): warm aged copper
 const STEAMPUNK1_WHITE_MAT = () => new THREE.MeshPhysicalMaterial({
-  color: '#B06A4F', roughness: 0.40, metalness: 0.35,
+  color: '#B06A4F', roughness: 0.40, metalness: 0.15,
   clearcoat: 0.4, clearcoatRoughness: 0.20,
 })
 const STEAMPUNK1_BLACK_MAT = () => new THREE.MeshPhysicalMaterial({
-  color: '#C3a74f', roughness: 0.30, metalness: 0.40,
+  color: '#C3a74f', roughness: 0.30, metalness: 0.15,
   clearcoat: 0.5, clearcoatRoughness: 0.10,
 })
 
@@ -296,21 +296,21 @@ export function preloadHiModels() {
 
 // Soft silver (white) vs soft gold (black) for GLB models
 const GLB_WHITE_MAT = () => new THREE.MeshPhysicalMaterial({
-  color: '#D4D8DC', roughness: 0.18, metalness: 0.88,
+  color: '#D4D8DC', roughness: 0.18, metalness: 0.15,
   clearcoat: 0.65, clearcoatRoughness: 0.10
 })
 const GLB_BLACK_MAT = () => new THREE.MeshPhysicalMaterial({
-  color: '#DEC98A', roughness: 0.22, metalness: 0.72,
+  color: '#DEC98A', roughness: 0.22, metalness: 0.15,
   clearcoat: 0.55, clearcoatRoughness: 0.12
 })
 
 // Crimson vs silver for retro models
 const RETRO_WHITE_MAT = () => new THREE.MeshPhysicalMaterial({
-  color: '#ffe3b3', roughness: 0.22, metalness: 0.55,
+  color: '#ffe3b3', roughness: 0.22, metalness: 0.15,
   clearcoat: 0.6, clearcoatRoughness: 0.12
 })
 const RETRO_BLACK_MAT = () => new THREE.MeshPhysicalMaterial({
-  color: '#Ce7b69', roughness: 0.30, metalness: 0.35,
+  color: '#Ce7b69', roughness: 0.30, metalness: 0.15,
   clearcoat: 0.5, clearcoatRoughness: 0.08
 })
 
@@ -325,7 +325,7 @@ const WHITE_MAT = () => new THREE.MeshPhysicalMaterial({
 const BLACK_MAT = () => new THREE.MeshPhysicalMaterial({
   color: '#B8C8D4',
   roughness: 0.08,
-  metalness: 0.95,
+  metalness: 0.15,
   clearcoat: 0.65,
   clearcoatRoughness: 0.05,
 })
@@ -515,7 +515,7 @@ function getLowPolyMat(color) {
         clearcoat: 0.3, clearcoatRoughness: 0.3, flatShading: true
       })
     : new THREE.MeshPhysicalMaterial({
-        color: '#C0CAD2', roughness: 0.22, metalness: 0.88,
+        color: '#C0CAD2', roughness: 0.22, metalness: 0.15,
         clearcoat: 0.3, clearcoatRoughness: 0.2, flatShading: true
       })
 }
