@@ -88,7 +88,7 @@ export function initScene(canvas) {
   renderer.outputColorSpace = THREE.SRGBColorSpace
 
   // Lighting
-  ambientLight = new THREE.AmbientLight('#ffffff', 0.5)
+  ambientLight = new THREE.AmbientLight('#ffffff', 1.2)
   scene.add(ambientLight)
 
   dirLight = new THREE.DirectionalLight('#fff8e7', 1.1)
