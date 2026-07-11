@@ -296,11 +296,11 @@ export function preloadHiModels() {
 
 // Soft silver (white) vs soft gold (black) for GLB models
 const GLB_WHITE_MAT = () => new THREE.MeshPhysicalMaterial({
-  color: '#D4D8DC', roughness: 0.18, metalness: 0.15,
+  color: '#D4D8DC', roughness: 0.18, metalness: 0.88,
   clearcoat: 0.65, clearcoatRoughness: 0.10
 })
 const GLB_BLACK_MAT = () => new THREE.MeshPhysicalMaterial({
-  color: '#DEC98A', roughness: 0.22, metalness: 0.15,
+  color: '#DEC98A', roughness: 0.22, metalness: 0.72,
   clearcoat: 0.55, clearcoatRoughness: 0.12
 })
 
