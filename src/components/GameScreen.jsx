@@ -249,25 +249,28 @@ export default function GameScreen({ setGameResult, playerInfo, settings, setSet
       const movingPiece = map[from]
       if (!movingPiece) return
 
-      // M2: En passant
-      if (captured) {
+      // M2 + M3: start remove and move animations in parallel to avoid stutter
+      const animations = []
+      if (captured && scene) {
         if (data.flags?.includes('e')) {
           const enPassantSquare = to[0] + from[1]
           const capturedMesh = map[enPassantSquare]
           if (capturedMesh) {
             delete map[enPassantSquare]
-            if (scene) {
-              await removePiece(capturedMesh, scene)
-              playCaptureEffect(scene, controls, enPassantSquare, PIECE_VALUES[captured] || 1)
-            }
+            animations.push(
+              removePiece(capturedMesh, scene).then(() =>
+                playCaptureEffect(scene, controls, enPassantSquare, PIECE_VALUES[captured] || 1)
+              )
+            )
           }
         } else if (map[to]) {
           const capturedMesh = map[to]
           delete map[to]
-          if (scene) {
-            await removePiece(capturedMesh, scene)
-            playCaptureEffect(scene, controls, to, PIECE_VALUES[captured] || 1)
-          }
+          animations.push(
+            removePiece(capturedMesh, scene).then(() =>
+              playCaptureEffect(scene, controls, to, PIECE_VALUES[captured] || 1)
+            )
+          )
         }
       }
 
@@ -277,7 +280,7 @@ export default function GameScreen({ setGameResult, playerInfo, settings, setSet
         delete map[from]
         movingPiece.userData.square = to
 
-        const animations = [movePiece(movingPiece, to)]
+        animations.push(movePiece(movingPiece, to))
 
         // M3: Castling — also animate the rook
         if (data.flags?.includes('k') || data.flags?.includes('q')) {
