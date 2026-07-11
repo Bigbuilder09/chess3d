@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import * as THREE from 'three'
 import { Chess } from 'chess.js'
 import { initScene, renderScene, disposeScene, markDirty, shouldRender, setSceneBg } from '../three/ChessScene.js'
-import { createBoard, highlightSquare, clearAllHighlights, showLegalDots, clearLegalDots, getBoardGroup, updateBoardStyle, setBoardModel } from '../three/BoardMesh.js'
+import { createBoard, highlightSquare, clearAllHighlights, showLegalDots, clearLegalDots, getBoardGroup, updateBoardStyle, setBoardModel, worldToSquare } from '../three/BoardMesh.js'
 import { createPiece, movePiece, removePiece, selectPiece, deselectPiece, rebuildPieces, preloadModels, preloadHiModels, preloadVicModels, preloadChineseModels, preloadChinesePModels, updateRGBPieces, clearRGBRegistry } from '../three/PieceMesh.js'
 import { gsap } from 'gsap'
 import { initControls, updateControls, disposeControls } from '../three/CameraController.js'
@@ -380,6 +380,14 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
       )
       for (const hit of boardHits) {
         if (hit.object.userData?.square) { clickedSquare = hit.object.userData.square; break }
+      }
+    }
+
+    // Fallback for GLB board models: map the 3D hit point to a square
+    if (!clickedSquare && intersects.length > 0) {
+      for (const hit of intersects) {
+        const sq = worldToSquare(hit.point.x, hit.point.z)
+        if (sq) { clickedSquare = sq; break }
       }
     }
 

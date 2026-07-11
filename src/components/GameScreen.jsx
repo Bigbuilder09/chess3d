@@ -503,6 +503,14 @@ export default function GameScreen({ setGameResult, playerInfo, settings, setSet
       }
     }
 
+    // Fallback for GLB board models: map the 3D hit point to a square
+    if (!clickedSquare && intersects.length > 0) {
+      for (const hit of intersects) {
+        const sq = worldToSquare(hit.point.x, hit.point.z)
+        if (sq) { clickedSquare = sq; break }
+      }
+    }
+
     if (!clickedSquare) {
       if (selectedSquare) {
         deselectPiece(pieceMapRef.current[selectedSquare])

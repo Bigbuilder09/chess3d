@@ -79,7 +79,7 @@ export function initScene(canvas) {
     antialias: true,
     alpha: false
   })
-  renderer.setSize(canvas.clientWidth, canvas.clientHeight)
+  renderer.setSize(canvas.clientWidth, canvas.clientHeight, false)
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
   renderer.shadowMap.enabled = true
   renderer.shadowMap.type = THREE.PCFSoftShadowMap
@@ -121,16 +121,19 @@ export function initScene(canvas) {
   )
   composer.addPass(bloomPass)
 
-  const handleResize = () => {
+  const applySize = () => {
     const w = canvas.clientWidth
     const h = canvas.clientHeight
+    if (w === 0 || h === 0) return
     camera.aspect = w / h
     camera.updateProjectionMatrix()
-    renderer.setSize(w, h)
+    renderer.setSize(w, h, false) // false = don't override CSS with inline style
     composer.setSize(w, h)
+    markDirty(4)
   }
-  window.addEventListener('resize', handleResize)
-  scene.userData._cleanupResize = handleResize
+  const resizeObserver = new ResizeObserver(applySize)
+  resizeObserver.observe(canvas)
+  scene.userData._cleanupResize = () => resizeObserver.disconnect()
 
   return { scene, camera, renderer, composer }
 }
@@ -173,7 +176,7 @@ export function renderScene() {
 export function disposeScene() {
   _bgLoadId++
   if (scene?.userData._cleanupResize) {
-    window.removeEventListener('resize', scene.userData._cleanupResize)
+    scene.userData._cleanupResize()
   }
   if (scene?.background instanceof THREE.Texture) scene.background.dispose()
   if (renderer) {
