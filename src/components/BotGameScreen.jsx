@@ -212,30 +212,34 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
     const movingPiece = map[from]
     if (!movingPiece) return
 
-    // En passant
-    if (captured && flags?.includes('e')) {
-      const epSq = to[0] + from[1]
-      const epMesh = map[epSq]
-      if (epMesh) {
-        delete map[epSq]
-        if (scene) {
-          await removePiece(epMesh, scene)
-          playCaptureEffect(scene, controls, epSq, PIECE_VALUES[captured] || 1)
+    // Start remove + move animations in parallel to avoid stutter on capture
+    const animations = [movePiece(movingPiece, to)]
+    if (captured && scene) {
+      if (flags?.includes('e')) {
+        const epSq = to[0] + from[1]
+        const epMesh = map[epSq]
+        if (epMesh) {
+          delete map[epSq]
+          animations.push(
+            removePiece(epMesh, scene).then(() =>
+              playCaptureEffect(scene, controls, epSq, PIECE_VALUES[captured] || 1)
+            )
+          )
         }
-      }
-    } else if (captured && map[to]) {
-      const capMesh = map[to]
-      delete map[to]
-      if (scene) {
-        await removePiece(capMesh, scene)
-        playCaptureEffect(scene, controls, to, PIECE_VALUES[captured] || 1)
+      } else if (map[to]) {
+        const capMesh = map[to]
+        delete map[to]
+        animations.push(
+          removePiece(capMesh, scene).then(() =>
+            playCaptureEffect(scene, controls, to, PIECE_VALUES[captured] || 1)
+          )
+        )
       }
     }
 
     map[to] = movingPiece
     delete map[from]
     movingPiece.userData.square = to
-    const animations = [movePiece(movingPiece, to)]
 
     // Castling
     if (flags?.includes('k') || flags?.includes('q')) {
