@@ -92,7 +92,7 @@ export function initScene(canvas) {
   scene.add(ambientLight)
 
   dirLight = new THREE.DirectionalLight('#fff8e7', 1.1)
-  dirLight.position.set(5, 12, 8)
+  dirLight.position.set(12, 12, 1)
   dirLight.castShadow = true
   dirLight.shadow.mapSize.width = 1024
   dirLight.shadow.mapSize.height = 1024
