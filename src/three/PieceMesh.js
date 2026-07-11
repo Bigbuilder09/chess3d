@@ -1025,8 +1025,13 @@ function createChinesePPiece(type, color, square, scene) {
         mats.forEach(mat => {
           if (mat.color) {
             mat.color.getHSL(_hsl)
-            mat.color.setHSL(_hsl.h, _hsl.s * 0.55, _hsl.l)
+            mat.color.setHSL(_hsl.h, Math.min(_hsl.s * 1.6, 1.0), Math.min(_hsl.l * 1.25, 0.90))
           }
+          if (mat.emissive) {
+            mat.emissive.getHSL(_hsl)
+            if (_hsl.l > 0) mat.emissive.setHSL(_hsl.h, Math.min(_hsl.s * 1.6, 1.0), Math.min(_hsl.l * 1.25, 0.90))
+          }
+          if (mat.roughness !== undefined) mat.roughness = Math.max(mat.roughness * 0.7, 0.05)
         })
       }
       child.castShadow = true
