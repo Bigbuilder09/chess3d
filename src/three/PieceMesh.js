@@ -300,8 +300,8 @@ const GLB_WHITE_MAT = () => new THREE.MeshPhysicalMaterial({
   clearcoat: 0.65, clearcoatRoughness: 0.10
 })
 const GLB_BLACK_MAT = () => new THREE.MeshPhysicalMaterial({
-  color: '#DEC98A', roughness: 0.22, metalness: 0.72,
-  clearcoat: 0.55, clearcoatRoughness: 0.12
+  color: '#DEC98A', roughness: 0.13, metalness: 0.88,
+  clearcoat: 0.70, clearcoatRoughness: 0.07
 })
 
 // Crimson vs silver for retro models
