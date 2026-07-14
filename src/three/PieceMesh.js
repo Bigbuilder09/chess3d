@@ -294,10 +294,14 @@ const JAPAN_GLB_MAP = {
 const JAPAN_MODEL_CACHE = {}
 const JAPAN_SIZE = { p: 0.78, r: 1.352, n: 1.17, b: 1.43, q: 1.56, k: 1.56 }
 
-// Soft gold for white side (mirrors GLB black mat) — original model colors kept for black
+// White side: polished ivory white; Black side: natural wood tone
 const JAPAN_WHITE_MAT = () => new THREE.MeshPhysicalMaterial({
-  color: '#DEC98A', roughness: 0.13, metalness: 0.88,
-  clearcoat: 0.70, clearcoatRoughness: 0.07,
+  color: '#F5F0E8', roughness: 0.18, metalness: 0.04,
+  clearcoat: 0.85, clearcoatRoughness: 0.08,
+})
+const JAPAN_BLACK_MAT = () => new THREE.MeshPhysicalMaterial({
+  color: '#8C6239', roughness: 0.60, metalness: 0.00,
+  clearcoat: 0.20, clearcoatRoughness: 0.30,
 })
 
 let japanLoadPromise = null
@@ -1105,23 +1109,11 @@ function createJapanPiece(type, color, square, scene) {
   }
 
   const inner = template.clone(true)
-  const _hsl = {}
-  const paleBlack = color === 'black' && ['r', 'n'].includes(t)
+  const mat = color === 'white' ? JAPAN_WHITE_MAT() : JAPAN_BLACK_MAT()
 
   inner.traverse(child => {
     if (child.isMesh) {
-      if (color === 'white') {
-        child.material = JAPAN_WHITE_MAT()
-      } else if (paleBlack) {
-        const mats = Array.isArray(child.material) ? child.material : [child.material]
-        mats.forEach(mat => {
-          if (mat.color) {
-            mat.color.getHSL(_hsl)
-            mat.color.setHSL(_hsl.h, Math.min(_hsl.s * 1.4, 1.0), _hsl.l * 0.55)
-          }
-          if (mat.roughness !== undefined) mat.roughness = Math.max(mat.roughness * 0.75, 0.05)
-        })
-      }
+      child.material = mat
       child.castShadow = true
       child.receiveShadow = true
     }
