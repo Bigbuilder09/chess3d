@@ -55,6 +55,8 @@ let fiber2WhiteTex = null
 let fiber2BlackTex = null
 let chineseWhiteTex = null
 let chineseBlackTex = null
+let vic2WhiteTex = null
+let vic2BlackTex = null
 
 export function preloadHiTextures() {
   if (hiPinkQueenTex) return
@@ -92,6 +94,14 @@ export function preloadChineseTextures() {
   chineseWhiteTex.colorSpace = THREE.SRGBColorSpace
   chineseBlackTex = texLoader.load('/textures/chinese_black_texture.jpg')
   chineseBlackTex.colorSpace = THREE.SRGBColorSpace
+}
+
+export function preloadVic2Textures() {
+  if (vic2WhiteTex) return
+  vic2WhiteTex = texLoader.load('/textures/vic2_white_texture.jpg')
+  vic2WhiteTex.colorSpace = THREE.SRGBColorSpace
+  vic2BlackTex = texLoader.load('/textures/vic2_black_texture.jpg')
+  vic2BlackTex.colorSpace = THREE.SRGBColorSpace
 }
 
 const GLB_MAP = {
@@ -232,6 +242,37 @@ export function preloadChinesePModels() {
     }
   })()
   return chinesePLoadPromise
+}
+
+// ─── Vic2 set ─────────────────────────────────────────────────────────────────
+const VIC2_GLB_MAP = {
+  pw: '/models/vic2/pawn_white.glb',
+  pb: '/models/vic2/pawn_black.glb',
+  bw: '/models/vic2/bishop_white.glb',
+  bb: '/models/vic2/bishop_black.glb',
+  nw: '/models/vic2/knight_white.glb',
+  nb: '/models/vic2/knight_black.glb',
+  rw: '/models/vic2/rook_white.glb',
+  rb: '/models/vic2/rook_black.glb',
+  qw: '/models/vic2/queen_white.glb',
+  qb: '/models/vic2/queen_black.glb',
+  kw: '/models/vic2/king_white.glb',
+  kb: '/models/vic2/king_black.glb',
+}
+const VIC2_MODEL_CACHE = {}
+const VIC2_SIZE = { p: 0.91, r: 1.37, n: 1.37, b: 1.37, q: 1.43, k: 1.50 }
+
+let vic2LoadPromise = null
+export function preloadVic2Models() {
+  if (vic2LoadPromise) return vic2LoadPromise
+  preloadVic2Textures()
+  const entries = Object.entries(VIC2_GLB_MAP)
+  vic2LoadPromise = (async () => {
+    for (let i = 0; i < entries.length; i += 3) {
+      await Promise.all(entries.slice(i, i + 3).map(([k, url]) => loadOne(k, url, VIC2_MODEL_CACHE)))
+    }
+  })()
+  return vic2LoadPromise
 }
 
 // ─── Vic set ──────────────────────────────────────────────────────────────────
@@ -1262,6 +1303,53 @@ function createVicPiece(type, color, square, scene) {
   return pivot
 }
 
+// ─── Vic2 set piece builder ───────────────────────────────────────────────────
+
+function createVic2Piece(type, color, square, scene) {
+  const t = type.toLowerCase()
+  const cacheKey = t + (color === 'white' ? 'w' : 'b')
+  const template = VIC2_MODEL_CACHE[cacheKey]
+  if (!template) {
+    preloadVic2Models()
+    return createClassicPiece(type, color, square, scene)
+  }
+
+  const tex = color === 'white' ? vic2WhiteTex : vic2BlackTex
+  const mat = tex ? new THREE.MeshMatcapMaterial({ matcap: tex }) : null
+
+  const inner = template.clone(true)
+  inner.traverse(child => {
+    if (child.isMesh) {
+      if (mat) child.material = mat
+      child.castShadow = true
+      child.receiveShadow = !tex
+    }
+  })
+
+  const box = new THREE.Box3().setFromObject(inner)
+  const height = box.max.y - box.min.y
+  const normalizedScale = height > 0 ? 1.0 / height : 1
+  const sizeMultiplier = VIC2_SIZE[t] ?? 1
+  inner.scale.setScalar(normalizedScale * sizeMultiplier)
+
+  const box2 = new THREE.Box3().setFromObject(inner)
+  const center = box2.getCenter(new THREE.Vector3())
+  inner.position.set(-center.x, -box2.min.y, -center.z)
+
+  const pivot = new THREE.Group()
+  pivot.add(inner)
+
+  const pos = squareToWorld(square)
+  pivot.position.set(pos.x, 0, pos.z)
+  pivot.rotation.y = color === 'white' ? Math.PI : 0
+
+  pivot.userData = { pieceType: t, color, square, normalizedScale: 1, baseY: 0 }
+  pivot.name = `piece_${type}_${color}_${square}`
+
+  scene.add(pivot)
+  return pivot
+}
+
 // ─── Fiber set piece builder ──────────────────────────────────────────────────
 
 function createFiberPiece(type, color, square, scene) {
@@ -1380,6 +1468,7 @@ export function createPiece(type, color, square, scene, style = 'classic') {
     case 'chinese_p':  return createChinesePPiece(type, color, square, scene)
     case 'japan':      return createJapanPiece(type, color, square, scene)
     case 'vic':        return createVicPiece(type, color, square, scene)
+    case 'vic2':       return createVic2Piece(type, color, square, scene)
     case 'fiber':      return createFiberPiece(type, color, square, scene)
     case 'fiber2':     return createFiber2Piece(type, color, square, scene)
     case 'symbol':  return createSymbolPiece(type, color, square, scene)

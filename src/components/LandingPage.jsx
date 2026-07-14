@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { createBoard, disposeBoard, updateBoardStyle } from '../three/BoardMesh.js'
-import { createPiece, rebuildPieces, preloadModels, preloadHiModels, preloadJapanModels, preloadFiberModels, preloadFiber2Models } from '../three/PieceMesh.js'
+import { createPiece, rebuildPieces, preloadModels, preloadHiModels, preloadJapanModels, preloadFiberModels, preloadFiber2Models, preloadVic2Models } from '../three/PieceMesh.js'
 import { useSocket } from '../hooks/useSocket.js'
 
 export default function LandingPage({ playerInfo, setPlayerInfo, botDifficulty, setBotDifficulty, settings, setSettings }) {
@@ -198,6 +198,12 @@ export default function LandingPage({ playerInfo, setPlayerInfo, botDifficulty, 
           if (sceneRef.current) rebuildPieces(sceneRef.current, pieceMapRef.current, 'japan')
         })
         .catch(err => console.warn('Japan model preload failed:', err))
+    } else if (settings.pieceStyle === 'vic2') {
+      preloadVic2Models()
+        .then(() => {
+          if (sceneRef.current) rebuildPieces(sceneRef.current, pieceMapRef.current, 'vic2')
+        })
+        .catch(err => console.warn('Vic2 model preload failed:', err))
     } else if (settings.pieceStyle === 'fiber') {
       preloadFiberModels()
         .then(() => {
@@ -394,6 +400,7 @@ export default function LandingPage({ playerInfo, setPlayerInfo, botDifficulty, 
                 { id: 'retro', label: 'Retro', desc: '3D retro' },
                 { id: 'ok',    label: 'OK',    desc: 'Hi twins' },
                 { id: 'japan', label: 'Japan', desc: 'Ivory/Orig' },
+                { id: 'vic2',  label: 'Vic2',  desc: 'Victorian+' },
                 { id: 'fiber',  label: 'Fiber',  desc: 'Fiber mat' },
                 { id: 'fiber2', label: 'Fiber2', desc: 'Purple/Sea' },
               ].map(s => (
