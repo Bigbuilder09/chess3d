@@ -292,7 +292,7 @@ const JAPAN_GLB_MAP = {
   k: '/models/japan/king.glb',
 }
 const JAPAN_MODEL_CACHE = {}
-const JAPAN_SIZE = { p: 0.6, r: 1.04, n: 1.3, b: 1.3, q: 1.56, k: 1.56 }
+const JAPAN_SIZE = { p: 0.6, r: 1.04, n: 1.3, b: 1.1, q: 1.56, k: 1.56 }
 
 // Soft gold for white side (mirrors GLB black mat) — original model colors kept for black
 const JAPAN_WHITE_MAT = () => new THREE.MeshPhysicalMaterial({
@@ -1105,10 +1105,23 @@ function createJapanPiece(type, color, square, scene) {
   }
 
   const inner = template.clone(true)
+  const _hsl = {}
+  const paleBlack = color === 'black' && ['p', 'r', 'n'].includes(t)
 
   inner.traverse(child => {
     if (child.isMesh) {
-      if (color === 'white') child.material = JAPAN_WHITE_MAT()
+      if (color === 'white') {
+        child.material = JAPAN_WHITE_MAT()
+      } else if (paleBlack) {
+        const mats = Array.isArray(child.material) ? child.material : [child.material]
+        mats.forEach(mat => {
+          if (mat.color) {
+            mat.color.getHSL(_hsl)
+            mat.color.setHSL(_hsl.h, Math.min(_hsl.s * 1.4, 1.0), _hsl.l * 0.55)
+          }
+          if (mat.roughness !== undefined) mat.roughness = Math.max(mat.roughness * 0.75, 0.05)
+        })
+      }
       child.castShadow = true
       child.receiveShadow = true
     }
