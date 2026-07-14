@@ -49,6 +49,8 @@ const texLoader = new THREE.TextureLoader()
 let hiPinkQueenTex = null
 let japanWhiteTex = null
 let japanBlackTex = null
+let fiberWhiteTex = null
+let fiberBlackTex = null
 
 export function preloadHiTextures() {
   if (hiPinkQueenTex) return
@@ -62,6 +64,14 @@ export function preloadJapanTextures() {
   japanWhiteTex.colorSpace = THREE.SRGBColorSpace
   japanBlackTex = texLoader.load('/textures/japan_black_texture.jpg')
   japanBlackTex.colorSpace = THREE.SRGBColorSpace
+}
+
+export function preloadFiberTextures() {
+  if (fiberWhiteTex) return
+  fiberWhiteTex = texLoader.load('/textures/fiber_white_texture.jpg')
+  fiberWhiteTex.colorSpace = THREE.SRGBColorSpace
+  fiberBlackTex = texLoader.load('/textures/fiber_black_texture.jpg')
+  fiberBlackTex.colorSpace = THREE.SRGBColorSpace
 }
 
 const GLB_MAP = {
@@ -290,6 +300,28 @@ export function preloadChineseModels() {
     Object.entries(CHINESE_GLB_MAP).map(([t, url]) => loadOne(t, url, CHINESE_MODEL_CACHE))
   )
   return chineseLoadPromise
+}
+
+// ─── Fiber set ────────────────────────────────────────────────────────────────
+const FIBER_GLB_MAP = {
+  p: '/models/fiber/pawn.glb',
+  r: '/models/fiber/rook.glb',
+  n: '/models/fiber/knight.glb',
+  b: '/models/fiber/bishop.glb',
+  q: '/models/fiber/queen.glb',
+  k: '/models/fiber/king.glb',
+}
+const FIBER_MODEL_CACHE = {}
+const FIBER_SIZE = { p: 0.8, r: 1.3, n: 1.3, b: 1.3, q: 1.3, k: 1.3 }
+
+let fiberLoadPromise = null
+export function preloadFiberModels() {
+  if (fiberLoadPromise) return fiberLoadPromise
+  preloadFiberTextures()
+  fiberLoadPromise = Promise.all(
+    Object.entries(FIBER_GLB_MAP).map(([t, url]) => loadOne(t, url, FIBER_MODEL_CACHE))
+  )
+  return fiberLoadPromise
 }
 
 // ─── Japan set ────────────────────────────────────────────────────────────────
@@ -1201,6 +1233,54 @@ function createVicPiece(type, color, square, scene) {
   return pivot
 }
 
+// ─── Fiber set piece builder ──────────────────────────────────────────────────
+
+function createFiberPiece(type, color, square, scene) {
+  const t = type.toLowerCase()
+  const template = FIBER_MODEL_CACHE[t]
+  if (!template) {
+    preloadFiberModels()
+    return createClassicPiece(type, color, square, scene)
+  }
+
+  const tex = color === 'white' ? fiberWhiteTex : fiberBlackTex
+  const mat = tex
+    ? new THREE.MeshMatcapMaterial({ matcap: tex })
+    : new THREE.MeshPhysicalMaterial({ color: color === 'white' ? '#DDEEFF' : '#223344', roughness: 0.3, metalness: 0.1 })
+
+  const inner = template.clone(true)
+  inner.traverse(child => {
+    if (child.isMesh) {
+      child.material = mat
+      child.castShadow = true
+      child.receiveShadow = !tex
+    }
+  })
+
+  const box = new THREE.Box3().setFromObject(inner)
+  const height = box.max.y - box.min.y
+  const normalizedScale = height > 0 ? 1.0 / height : 1
+  const sizeMultiplier = FIBER_SIZE[t] ?? 1
+  inner.scale.setScalar(normalizedScale * sizeMultiplier)
+
+  const box2 = new THREE.Box3().setFromObject(inner)
+  const center = box2.getCenter(new THREE.Vector3())
+  inner.position.set(-center.x, -box2.min.y, -center.z)
+
+  const pivot = new THREE.Group()
+  pivot.add(inner)
+
+  const pos = squareToWorld(square)
+  pivot.position.set(pos.x, 0, pos.z)
+  pivot.rotation.y = color === 'white' ? Math.PI : 0
+
+  pivot.userData = { pieceType: t, color, square, normalizedScale: 1, baseY: 0 }
+  pivot.name = `piece_${type}_${color}_${square}`
+
+  scene.add(pivot)
+  return pivot
+}
+
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 /**
@@ -1223,6 +1303,7 @@ export function createPiece(type, color, square, scene, style = 'classic') {
     case 'chinese_p':  return createChinesePPiece(type, color, square, scene)
     case 'japan':      return createJapanPiece(type, color, square, scene)
     case 'vic':        return createVicPiece(type, color, square, scene)
+    case 'fiber':      return createFiberPiece(type, color, square, scene)
     case 'symbol':  return createSymbolPiece(type, color, square, scene)
     case 'lowpoly': return createLowPolyPiece(type, color, square, scene)
     default:        return createClassicPiece(type, color, square, scene)

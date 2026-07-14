@@ -4,7 +4,7 @@ import * as THREE from 'three'
 import { Chess } from 'chess.js'
 import { initScene, renderScene, disposeScene, markDirty, shouldRender, setSceneBg } from '../three/ChessScene.js'
 import { createBoard, highlightSquare, clearAllHighlights, showLegalDots, clearLegalDots, getBoardGroup, updateBoardStyle, setBoardModel, worldToSquare } from '../three/BoardMesh.js'
-import { createPiece, movePiece, removePiece, selectPiece, deselectPiece, rebuildPieces, preloadModels, preloadHiModels, preloadVicModels, preloadChineseModels, preloadChinesePModels, preloadJapanModels, updateRGBPieces, clearRGBRegistry } from '../three/PieceMesh.js'
+import { createPiece, movePiece, removePiece, selectPiece, deselectPiece, rebuildPieces, preloadModels, preloadHiModels, preloadVicModels, preloadChineseModels, preloadChinesePModels, preloadJapanModels, preloadFiberModels, updateRGBPieces, clearRGBRegistry } from '../three/PieceMesh.js'
 import { gsap } from 'gsap'
 import { initControls, updateControls, disposeControls } from '../three/CameraController.js'
 import { playCaptureEffect, playCheckEffect, clearCheckEffect, playCheckmateEffect } from '../three/CaptureEffect.js'
@@ -176,6 +176,13 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
           markDirty()
         })
         .catch(err => console.warn('Japan model preload failed:', err))
+    } else if (settings.pieceStyle === 'fiber') {
+      preloadFiberModels()
+        .then(() => {
+          if (sceneRef.current) rebuildPieces(sceneRef.current, pieceMapRef.current, 'fiber')
+          markDirty()
+        })
+        .catch(err => console.warn('Fiber model preload failed:', err))
     } else {
       rebuildPieces(sceneRef.current, pieceMapRef.current, settings.pieceStyle)
       markDirty()
@@ -548,6 +555,7 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
                     { id: 'chinese',   label: 'Chinese',     desc: 'Oriental' },
                     { id: 'chinese_p', label: 'Ch. Perfect', desc: 'Colored' },
                     { id: 'japan',     label: 'Japan',       desc: 'Ivory/Orig' },
+                    { id: 'fiber',     label: 'Fiber',       desc: 'Fiber mat' },
                   ].map(s => (
                     <button
                       key={s.id}
