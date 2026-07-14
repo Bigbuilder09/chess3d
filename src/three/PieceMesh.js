@@ -53,6 +53,8 @@ let fiberWhiteTex = null
 let fiberBlackTex = null
 let fiber2WhiteTex = null
 let fiber2BlackTex = null
+let chineseWhiteTex = null
+let chineseBlackTex = null
 
 export function preloadHiTextures() {
   if (hiPinkQueenTex) return
@@ -82,6 +84,14 @@ export function preloadFiber2Textures() {
   fiber2WhiteTex.colorSpace = THREE.SRGBColorSpace
   fiber2BlackTex = texLoader.load('/textures/fiber2_black_texture.jpg')
   fiber2BlackTex.colorSpace = THREE.SRGBColorSpace
+}
+
+export function preloadChineseTextures() {
+  if (chineseWhiteTex) return
+  chineseWhiteTex = texLoader.load('/textures/chinese_white_texture.jpg')
+  chineseWhiteTex.colorSpace = THREE.SRGBColorSpace
+  chineseBlackTex = texLoader.load('/textures/chinese_black_texture.jpg')
+  chineseBlackTex.colorSpace = THREE.SRGBColorSpace
 }
 
 const GLB_MAP = {
@@ -306,6 +316,7 @@ const CHINESE_BLACK_MAT = () => new THREE.MeshPhysicalMaterial({
 let chineseLoadPromise = null
 export function preloadChineseModels() {
   if (chineseLoadPromise) return chineseLoadPromise
+  preloadChineseTextures()
   chineseLoadPromise = Promise.all(
     Object.entries(CHINESE_GLB_MAP).map(([t, url]) => loadOne(t, url, CHINESE_MODEL_CACHE))
   )
@@ -1061,14 +1072,17 @@ function createChinesePiece(type, color, square, scene) {
     return createClassicPiece(type, color, square, scene)
   }
 
-  const mat = color === 'white' ? CHINESE_WHITE_MAT() : CHINESE_BLACK_MAT()
+  const tex = color === 'white' ? chineseWhiteTex : chineseBlackTex
+  const mat = tex
+    ? new THREE.MeshMatcapMaterial({ matcap: tex })
+    : (color === 'white' ? CHINESE_WHITE_MAT() : CHINESE_BLACK_MAT())
   const inner = template.clone(true)
 
   inner.traverse(child => {
     if (child.isMesh) {
       child.material = mat
       child.castShadow = true
-      child.receiveShadow = true
+      child.receiveShadow = !tex
     }
   })
 
