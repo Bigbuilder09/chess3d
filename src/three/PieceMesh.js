@@ -246,18 +246,12 @@ export function preloadChinesePModels() {
 
 // ─── Vic2 set ─────────────────────────────────────────────────────────────────
 const VIC2_GLB_MAP = {
-  pw: '/models/vic2/pawn_white.glb',
-  pb: '/models/vic2/pawn_black.glb',
-  bw: '/models/vic2/bishop_white.glb',
-  bb: '/models/vic2/bishop_black.glb',
-  nw: '/models/vic2/knight_white.glb',
-  nb: '/models/vic2/knight_black.glb',
-  rw: '/models/vic2/rook_white.glb',
-  rb: '/models/vic2/rook_black.glb',
-  qw: '/models/vic2/queen_white.glb',
-  qb: '/models/vic2/queen_black.glb',
-  kw: '/models/vic2/king_white.glb',
-  kb: '/models/vic2/king_black.glb',
+  p: '/models/vic2/pawn.glb',
+  r: '/models/vic2/rook.glb',
+  n: '/models/vic2/knight.glb',
+  b: '/models/vic2/bishop.glb',
+  q: '/models/vic2/queen.glb',
+  k: '/models/vic2/king.glb',
 }
 const VIC2_MODEL_CACHE = {}
 const VIC2_SIZE = { p: 0.91, r: 1.37, n: 1.37, b: 1.37, q: 1.43, k: 1.50 }
@@ -1307,8 +1301,7 @@ function createVicPiece(type, color, square, scene) {
 
 function createVic2Piece(type, color, square, scene) {
   const t = type.toLowerCase()
-  const cacheKey = t + (color === 'white' ? 'w' : 'b')
-  const template = VIC2_MODEL_CACHE[cacheKey]
+  const template = VIC2_MODEL_CACHE[t]
   if (!template) {
     preloadVic2Models()
     return createClassicPiece(type, color, square, scene)
