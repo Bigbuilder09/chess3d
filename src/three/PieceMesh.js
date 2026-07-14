@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js'
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js'
 import { gsap } from 'gsap'
 import { squareToWorld } from './BoardMesh.js'
 import { markDirty } from './ChessScene.js'
@@ -42,6 +43,7 @@ const draco = new DRACOLoader()
 draco.setDecoderPath('/draco/')
 const loader = new GLTFLoader()
 loader.setDRACOLoader(draco)
+loader.setMeshoptDecoder(MeshoptDecoder)
 const MODEL_CACHE = {}  // type → THREE.Group (template clone)
 
 // ─── Texture cache ────────────────────────────────────────────────────────────
