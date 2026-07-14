@@ -51,6 +51,8 @@ let japanWhiteTex = null
 let japanBlackTex = null
 let fiberWhiteTex = null
 let fiberBlackTex = null
+let fiber2WhiteTex = null
+let fiber2BlackTex = null
 
 export function preloadHiTextures() {
   if (hiPinkQueenTex) return
@@ -72,6 +74,14 @@ export function preloadFiberTextures() {
   fiberWhiteTex.colorSpace = THREE.SRGBColorSpace
   fiberBlackTex = texLoader.load('/textures/fiber_black_texture.jpg')
   fiberBlackTex.colorSpace = THREE.SRGBColorSpace
+}
+
+export function preloadFiber2Textures() {
+  if (fiber2WhiteTex) return
+  fiber2WhiteTex = texLoader.load('/textures/fiber2_white_texture.jpg')
+  fiber2WhiteTex.colorSpace = THREE.SRGBColorSpace
+  fiber2BlackTex = texLoader.load('/textures/fiber2_black_texture.jpg')
+  fiber2BlackTex.colorSpace = THREE.SRGBColorSpace
 }
 
 const GLB_MAP = {
@@ -322,6 +332,11 @@ export function preloadFiberModels() {
     Object.entries(FIBER_GLB_MAP).map(([t, url]) => loadOne(t, url, FIBER_MODEL_CACHE))
   )
   return fiberLoadPromise
+}
+
+export function preloadFiber2Models() {
+  preloadFiber2Textures()
+  return preloadFiberModels() // same GLB files, share cache
 }
 
 // ─── Japan set ────────────────────────────────────────────────────────────────
@@ -1281,6 +1296,54 @@ function createFiberPiece(type, color, square, scene) {
   return pivot
 }
 
+// ─── Fiber2 set piece builder ─────────────────────────────────────────────────
+
+function createFiber2Piece(type, color, square, scene) {
+  const t = type.toLowerCase()
+  const template = FIBER_MODEL_CACHE[t]
+  if (!template) {
+    preloadFiber2Models()
+    return createClassicPiece(type, color, square, scene)
+  }
+
+  const tex = color === 'white' ? fiber2WhiteTex : fiber2BlackTex
+  const mat = tex
+    ? new THREE.MeshMatcapMaterial({ matcap: tex })
+    : new THREE.MeshPhysicalMaterial({ color: color === 'white' ? '#6A0DAD' : '#006994', roughness: 0.3, metalness: 0.1 })
+
+  const inner = template.clone(true)
+  inner.traverse(child => {
+    if (child.isMesh) {
+      child.material = mat
+      child.castShadow = true
+      child.receiveShadow = !tex
+    }
+  })
+
+  const box = new THREE.Box3().setFromObject(inner)
+  const height = box.max.y - box.min.y
+  const normalizedScale = height > 0 ? 1.0 / height : 1
+  const sizeMultiplier = FIBER_SIZE[t] ?? 1
+  inner.scale.setScalar(normalizedScale * sizeMultiplier)
+
+  const box2 = new THREE.Box3().setFromObject(inner)
+  const center = box2.getCenter(new THREE.Vector3())
+  inner.position.set(-center.x, -box2.min.y, -center.z)
+
+  const pivot = new THREE.Group()
+  pivot.add(inner)
+
+  const pos = squareToWorld(square)
+  pivot.position.set(pos.x, 0, pos.z)
+  pivot.rotation.y = color === 'white' ? Math.PI : 0
+
+  pivot.userData = { pieceType: t, color, square, normalizedScale: 1, baseY: 0 }
+  pivot.name = `piece_${type}_${color}_${square}`
+
+  scene.add(pivot)
+  return pivot
+}
+
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 /**
@@ -1304,6 +1367,7 @@ export function createPiece(type, color, square, scene, style = 'classic') {
     case 'japan':      return createJapanPiece(type, color, square, scene)
     case 'vic':        return createVicPiece(type, color, square, scene)
     case 'fiber':      return createFiberPiece(type, color, square, scene)
+    case 'fiber2':     return createFiber2Piece(type, color, square, scene)
     case 'symbol':  return createSymbolPiece(type, color, square, scene)
     case 'lowpoly': return createLowPolyPiece(type, color, square, scene)
     default:        return createClassicPiece(type, color, square, scene)

@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom'
 import * as THREE from 'three'
 import { initScene, renderScene, disposeScene, getScene, getCamera, markDirty, shouldRender, setSceneBg } from '../three/ChessScene.js'
 import { createBoard, squareToWorld, worldToSquare, highlightSquare, clearAllHighlights, showLegalDots, clearLegalDots, getBoardGroup, updateBoardStyle, setBoardModel } from '../three/BoardMesh.js'
-import { createPiece, movePiece, removePiece, selectPiece, deselectPiece, rebuildPieces, buildPiecesFromBoard, clearAllPieces, preloadModels, preloadHiModels, preloadVicModels, preloadChineseModels, preloadChinesePModels, preloadJapanModels, preloadFiberModels, updateRGBPieces, clearRGBRegistry } from '../three/PieceMesh.js'
+import { createPiece, movePiece, removePiece, selectPiece, deselectPiece, rebuildPieces, buildPiecesFromBoard, clearAllPieces, preloadModels, preloadHiModels, preloadVicModels, preloadChineseModels, preloadChinesePModels, preloadJapanModels, preloadFiberModels, preloadFiber2Models, updateRGBPieces, clearRGBRegistry } from '../three/PieceMesh.js'
 import { gsap } from 'gsap'
 import { initControls, updateControls, disposeControls, flipCamera } from '../three/CameraController.js'
 import { playCaptureEffect, playCheckEffect, clearCheckEffect, playCheckmateEffect } from '../three/CaptureEffect.js'
@@ -231,6 +231,13 @@ export default function GameScreen({ setGameResult, playerInfo, settings, setSet
           markDirty()
         })
         .catch(err => console.warn('Fiber model preload failed:', err))
+    } else if (settings.pieceStyle === 'fiber2') {
+      preloadFiber2Models()
+        .then(() => {
+          if (sceneRef.current) rebuildPieces(sceneRef.current, pieceMapRef.current, 'fiber2')
+          markDirty()
+        })
+        .catch(err => console.warn('Fiber2 model preload failed:', err))
     } else {
       rebuildPieces(sceneRef.current, pieceMapRef.current, settings.pieceStyle)
       markDirty()
@@ -734,6 +741,7 @@ export default function GameScreen({ setGameResult, playerInfo, settings, setSet
                     { id: 'chinese_p', label: 'Ch. Perfect', desc: 'Colored' },
                     { id: 'japan',     label: 'Japan',     desc: 'Ivory/Orig' },
                     { id: 'fiber',     label: 'Fiber',     desc: 'Fiber mat' },
+                    { id: 'fiber2',    label: 'Fiber2',    desc: 'Purple/Sea' },
                   ].map(s => (
                     <button
                       key={s.id}
