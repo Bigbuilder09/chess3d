@@ -49,6 +49,8 @@ const MODEL_CACHE = {}  // type → THREE.Group (template clone)
 // ─── Texture cache ────────────────────────────────────────────────────────────
 const texLoader = new THREE.TextureLoader()
 let hiPinkQueenTex = null
+let glbWhiteTex = null
+let glbBlackTex = null
 let japanWhiteTex = null
 let japanBlackTex = null
 let fiberWhiteTex = null
@@ -64,6 +66,14 @@ export function preloadHiTextures() {
   if (hiPinkQueenTex) return
   hiPinkQueenTex = texLoader.load('/textures/queen_pink_texture.png')
   hiPinkQueenTex.colorSpace = THREE.SRGBColorSpace
+}
+
+export function preloadGlbTextures() {
+  if (glbWhiteTex) return
+  glbWhiteTex = texLoader.load('/textures/glb_white_texture.jpg')
+  glbWhiteTex.colorSpace = THREE.SRGBColorSpace
+  glbBlackTex = texLoader.load('/textures/glb_black_texture.jpg')
+  glbBlackTex.colorSpace = THREE.SRGBColorSpace
 }
 
 export function preloadJapanTextures() {
@@ -208,6 +218,7 @@ const loadOne = (type, url, cache) =>
 
 // Preload lightweight sets at startup (glb + retro + fun)
 export function preloadModels() {
+  preloadGlbTextures()
   return Promise.all([
     ...Object.entries(GLB_MAP).map(([t, url]) => loadOne(t, url, MODEL_CACHE)),
     ...Object.entries(RETRO_GLB_MAP).map(([t, url]) => loadOne(t, url, RETRO_MODEL_CACHE)),
@@ -814,14 +825,17 @@ function createGLBPiece(type, color, square, scene) {
   const template = MODEL_CACHE[t]
   if (!template) return createClassicPiece(type, color, square, scene) // fallback
 
-  const mat = color === 'white' ? GLB_WHITE_MAT() : GLB_BLACK_MAT()
+  const tex = color === 'white' ? glbWhiteTex : glbBlackTex
+  const mat = tex
+    ? new THREE.MeshMatcapMaterial({ matcap: tex })
+    : (color === 'white' ? GLB_WHITE_MAT() : GLB_BLACK_MAT())
   const inner = template.clone(true)
 
   inner.traverse(child => {
     if (child.isMesh) {
       child.material = mat
       child.castShadow = true
-      child.receiveShadow = true
+      child.receiveShadow = !tex
     }
   })
 
