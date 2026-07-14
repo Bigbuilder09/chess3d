@@ -292,7 +292,7 @@ const JAPAN_GLB_MAP = {
   k: '/models/japan/king.glb',
 }
 const JAPAN_MODEL_CACHE = {}
-const JAPAN_SIZE = { p: 0.78, r: 1.352, n: 1.3, b: 1.43, q: 1.56, k: 1.56 }
+const JAPAN_SIZE = { p: 0.78, r: 1.352, n: 1.17, b: 1.43, q: 1.56, k: 1.56 }
 
 // Soft gold for white side (mirrors GLB black mat) — original model colors kept for black
 const JAPAN_WHITE_MAT = () => new THREE.MeshPhysicalMaterial({
