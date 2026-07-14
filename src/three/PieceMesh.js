@@ -294,10 +294,10 @@ const JAPAN_GLB_MAP = {
 const JAPAN_MODEL_CACHE = {}
 const JAPAN_SIZE = { p: 0.6, r: 1.04, n: 1.3, b: 1.3, q: 1.56, k: 1.56 }
 
-// Warm polished ivory for white side — original model colors kept for black
-const JAPAN_IVORY_MAT = () => new THREE.MeshPhysicalMaterial({
-  color: '#F8F0D8', roughness: 0.28, metalness: 0.05,
-  clearcoat: 0.65, clearcoatRoughness: 0.10,
+// Soft gold for white side (mirrors GLB black mat) — original model colors kept for black
+const JAPAN_WHITE_MAT = () => new THREE.MeshPhysicalMaterial({
+  color: '#DEC98A', roughness: 0.13, metalness: 0.88,
+  clearcoat: 0.70, clearcoatRoughness: 0.07,
 })
 
 let japanLoadPromise = null
@@ -1108,7 +1108,7 @@ function createJapanPiece(type, color, square, scene) {
 
   inner.traverse(child => {
     if (child.isMesh) {
-      if (color === 'white') child.material = JAPAN_IVORY_MAT()
+      if (color === 'white') child.material = JAPAN_WHITE_MAT()
       child.castShadow = true
       child.receiveShadow = true
     }
