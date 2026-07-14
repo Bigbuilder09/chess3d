@@ -47,11 +47,21 @@ const MODEL_CACHE = {}  // type → THREE.Group (template clone)
 // ─── Texture cache ────────────────────────────────────────────────────────────
 const texLoader = new THREE.TextureLoader()
 let hiPinkQueenTex = null
+let japanWhiteTex = null
+let japanBlackTex = null
 
 export function preloadHiTextures() {
   if (hiPinkQueenTex) return
   hiPinkQueenTex = texLoader.load('/textures/queen_pink_texture.png')
   hiPinkQueenTex.colorSpace = THREE.SRGBColorSpace
+}
+
+export function preloadJapanTextures() {
+  if (japanWhiteTex) return
+  japanWhiteTex = texLoader.load('/textures/japan_white_texture.jpg')
+  japanWhiteTex.colorSpace = THREE.SRGBColorSpace
+  japanBlackTex = texLoader.load('/textures/japan_black_texture.jpg')
+  japanBlackTex.colorSpace = THREE.SRGBColorSpace
 }
 
 const GLB_MAP = {
@@ -307,6 +317,7 @@ const JAPAN_BLACK_MAT = () => new THREE.MeshPhysicalMaterial({
 let japanLoadPromise = null
 export function preloadJapanModels() {
   if (japanLoadPromise) return japanLoadPromise
+  preloadJapanTextures()
   const entries = Object.entries(JAPAN_GLB_MAP)
   japanLoadPromise = (async () => {
     for (let i = 0; i < entries.length; i += 2) {
@@ -1109,13 +1120,16 @@ function createJapanPiece(type, color, square, scene) {
   }
 
   const inner = template.clone(true)
-  const mat = color === 'white' ? JAPAN_WHITE_MAT() : JAPAN_BLACK_MAT()
+  const tex = color === 'white' ? japanWhiteTex : japanBlackTex
+  const mat = tex
+    ? new THREE.MeshMatcapMaterial({ matcap: tex })
+    : (color === 'white' ? JAPAN_WHITE_MAT() : JAPAN_BLACK_MAT())
 
   inner.traverse(child => {
     if (child.isMesh) {
       child.material = mat
       child.castShadow = true
-      child.receiveShadow = true
+      child.receiveShadow = tex ? false : true
     }
   })
 
