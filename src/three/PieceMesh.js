@@ -282,6 +282,36 @@ export function preloadChineseModels() {
   return chineseLoadPromise
 }
 
+// ─── Japan set ────────────────────────────────────────────────────────────────
+const JAPAN_GLB_MAP = {
+  p: '/models/japan/pawn.glb',
+  r: '/models/japan/rook.glb',
+  n: '/models/japan/knight.glb',
+  b: '/models/japan/bishop.glb',
+  q: '/models/japan/queen.glb',
+  k: '/models/japan/king.glb',
+}
+const JAPAN_MODEL_CACHE = {}
+const JAPAN_SIZE = { r: 1.3, n: 1.3, b: 1.3, q: 1.3, k: 1.3 }
+
+// Warm polished ivory for white side — original model colors kept for black
+const JAPAN_IVORY_MAT = () => new THREE.MeshPhysicalMaterial({
+  color: '#F8F0D8', roughness: 0.28, metalness: 0.05,
+  clearcoat: 0.65, clearcoatRoughness: 0.10,
+})
+
+let japanLoadPromise = null
+export function preloadJapanModels() {
+  if (japanLoadPromise) return japanLoadPromise
+  const entries = Object.entries(JAPAN_GLB_MAP)
+  japanLoadPromise = (async () => {
+    for (let i = 0; i < entries.length; i += 2) {
+      await Promise.all(entries.slice(i, i + 2).map(([k, url]) => loadOne(k, url, JAPAN_MODEL_CACHE)))
+    }
+  })()
+  return japanLoadPromise
+}
+
 // Lazy-load hi set only when user selects it
 let hiLoadPromise = null
 export function preloadHiModels() {
@@ -1063,6 +1093,51 @@ function createChinesePPiece(type, color, square, scene) {
   return pivot
 }
 
+// ─── Japan set piece builder ──────────────────────────────────────────────────
+// Black: keeps original GLB material; White: dyed ivory
+
+function createJapanPiece(type, color, square, scene) {
+  const t = type.toLowerCase()
+  const template = JAPAN_MODEL_CACHE[t]
+  if (!template) {
+    preloadJapanModels()
+    return createClassicPiece(type, color, square, scene)
+  }
+
+  const inner = template.clone(true)
+
+  inner.traverse(child => {
+    if (child.isMesh) {
+      if (color === 'white') child.material = JAPAN_IVORY_MAT()
+      child.castShadow = true
+      child.receiveShadow = true
+    }
+  })
+
+  const box = new THREE.Box3().setFromObject(inner)
+  const height = box.max.y - box.min.y
+  const normalizedScale = height > 0 ? 1.0 / height : 1
+  const sizeMultiplier = JAPAN_SIZE[t] ?? 1
+  inner.scale.setScalar(normalizedScale * sizeMultiplier)
+
+  const box2 = new THREE.Box3().setFromObject(inner)
+  const center = box2.getCenter(new THREE.Vector3())
+  inner.position.set(-center.x, -box2.min.y, -center.z)
+
+  const pivot = new THREE.Group()
+  pivot.add(inner)
+
+  const pos = squareToWorld(square)
+  pivot.position.set(pos.x, 0, pos.z)
+  pivot.rotation.y = color === 'white' ? Math.PI : 0
+
+  pivot.userData = { pieceType: t, color, square, normalizedScale: 1, baseY: 0 }
+  pivot.name = `piece_${type}_${color}_${square}`
+
+  scene.add(pivot)
+  return pivot
+}
+
 // ─── Vic set piece builder ────────────────────────────────────────────────────
 
 function createVicPiece(type, color, square, scene) {
@@ -1127,6 +1202,7 @@ export function createPiece(type, color, square, scene, style = 'classic') {
     case 'steampunk1': return createSteampunk1Piece(type, color, square, scene)
     case 'chinese':    return createChinesePiece(type, color, square, scene)
     case 'chinese_p':  return createChinesePPiece(type, color, square, scene)
+    case 'japan':      return createJapanPiece(type, color, square, scene)
     case 'vic':        return createVicPiece(type, color, square, scene)
     case 'symbol':  return createSymbolPiece(type, color, square, scene)
     case 'lowpoly': return createLowPolyPiece(type, color, square, scene)
