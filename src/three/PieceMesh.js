@@ -340,6 +340,43 @@ export function preloadSteampunk1Models() {
   return steampunk1LoadPromise
 }
 
+// ─── Neo Punk set ─────────────────────────────────────────────────────────────
+const NEO_PUNK_GLB_MAP = {
+  p: '/models/neo_punk/pawn.glb',
+  r: '/models/neo_punk/rook.glb',
+  n: '/models/neo_punk/knight.glb',
+  b: '/models/neo_punk/bishop.glb',
+  q: '/models/neo_punk/queen.glb',
+  k: '/models/neo_punk/king.glb',
+}
+const NEO_PUNK_MODEL_CACHE = {}
+const NEO_PUNK_SIZE = { p: 0.8, r: 1.3, n: 1.3, b: 1.3, q: 1.3, k: 1.3 }
+
+// White: chrome silver + hot-pink neon glow
+const NEO_PUNK_WHITE_MAT = () => new THREE.MeshPhysicalMaterial({
+  color: '#C0C0C8', roughness: 0.08, metalness: 0.92,
+  clearcoat: 0.9, clearcoatRoughness: 0.05,
+  emissive: new THREE.Color('#FF1493'), emissiveIntensity: 0.5,
+})
+// Black: matte black + electric cyan neon glow
+const NEO_PUNK_BLACK_MAT = () => new THREE.MeshPhysicalMaterial({
+  color: '#0A0A12', roughness: 0.20, metalness: 0.75,
+  clearcoat: 0.7, clearcoatRoughness: 0.08,
+  emissive: new THREE.Color('#00FFCC'), emissiveIntensity: 0.6,
+})
+
+let neoPunkLoadPromise = null
+export function preloadNeoPunkModels() {
+  if (neoPunkLoadPromise) return neoPunkLoadPromise
+  const entries = Object.entries(NEO_PUNK_GLB_MAP)
+  neoPunkLoadPromise = (async () => {
+    for (let i = 0; i < entries.length; i += 3) {
+      await Promise.all(entries.slice(i, i + 3).map(([k, url]) => loadOne(k, url, NEO_PUNK_MODEL_CACHE)))
+    }
+  })()
+  return neoPunkLoadPromise
+}
+
 // ─── Chinese set ───────────────────────────────────────────────────────────────
 const CHINESE_GLB_MAP = {
   p: '/models/chinese/pawn.glb',
@@ -1113,6 +1150,53 @@ function createSteampunk1Piece(type, color, square, scene) {
   return pivot
 }
 
+// ─── Neo Punk piece builder ───────────────────────────────────────────────────
+
+function createNeoPunkPiece(type, color, square, scene) {
+  const t = type.toLowerCase()
+  const template = NEO_PUNK_MODEL_CACHE[t]
+  if (!template) {
+    preloadNeoPunkModels()
+    return createClassicPiece(type, color, square, scene)
+  }
+
+  const mat = color === 'white' ? NEO_PUNK_WHITE_MAT() : NEO_PUNK_BLACK_MAT()
+  const inner = template.clone(true)
+
+  if (t === 'k' || t === 'q' || t === 'b') inner.rotation.y = Math.PI
+
+  inner.traverse(child => {
+    if (child.isMesh) {
+      child.material = mat
+      child.castShadow = true
+      child.receiveShadow = true
+    }
+  })
+
+  const box = new THREE.Box3().setFromObject(inner)
+  const height = box.max.y - box.min.y
+  const normalizedScale = height > 0 ? 1.0 / height : 1
+  const sizeMultiplier = NEO_PUNK_SIZE[t] ?? 1
+  inner.scale.setScalar(normalizedScale * sizeMultiplier)
+
+  const box2 = new THREE.Box3().setFromObject(inner)
+  const center = box2.getCenter(new THREE.Vector3())
+  inner.position.set(-center.x, -box2.min.y, -center.z)
+
+  const pivot = new THREE.Group()
+  pivot.add(inner)
+
+  const pos = squareToWorld(square)
+  pivot.position.set(pos.x, 0, pos.z)
+  pivot.rotation.y = color === 'white' ? Math.PI : 0
+
+  pivot.userData = { pieceType: t, color, square, normalizedScale: 1, baseY: 0 }
+  pivot.name = `piece_${type}_${color}_${square}`
+
+  scene.add(pivot)
+  return pivot
+}
+
 // ─── Chinese set piece builder ────────────────────────────────────────────────
 
 function createChinesePiece(type, color, square, scene) {
@@ -1473,6 +1557,7 @@ export function createPiece(type, color, square, scene, style = 'classic') {
     case 'hi':      return createHiPiece(type, color, square, scene)
     case 'ok':         return createOkPiece(type, color, square, scene)
     case 'steampunk1': return createSteampunk1Piece(type, color, square, scene)
+    case 'neo_punk':   return createNeoPunkPiece(type, color, square, scene)
     case 'chinese':    return createChinesePiece(type, color, square, scene)
     case 'chinese_p':  return createChinesePPiece(type, color, square, scene)
     case 'japan':      return createJapanPiece(type, color, square, scene)

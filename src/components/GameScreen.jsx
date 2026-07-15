@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom'
 import * as THREE from 'three'
 import { initScene, renderScene, disposeScene, getScene, getCamera, markDirty, shouldRender, setSceneBg } from '../three/ChessScene.js'
 import { createBoard, squareToWorld, worldToSquare, highlightSquare, clearAllHighlights, showLegalDots, clearLegalDots, getBoardGroup, updateBoardStyle, setBoardModel } from '../three/BoardMesh.js'
-import { createPiece, movePiece, removePiece, selectPiece, deselectPiece, rebuildPieces, buildPiecesFromBoard, clearAllPieces, preloadModels, preloadHiModels, preloadVicModels, preloadVic2Models, preloadChineseModels, preloadChinesePModels, preloadJapanModels, preloadFiberModels, preloadFiber2Models, updateRGBPieces, clearRGBRegistry } from '../three/PieceMesh.js'
+import { createPiece, movePiece, removePiece, selectPiece, deselectPiece, rebuildPieces, buildPiecesFromBoard, clearAllPieces, preloadModels, preloadHiModels, preloadVicModels, preloadVic2Models, preloadChineseModels, preloadChinesePModels, preloadJapanModels, preloadFiberModels, preloadFiber2Models, preloadNeoPunkModels, updateRGBPieces, clearRGBRegistry } from '../three/PieceMesh.js'
 import { gsap } from 'gsap'
 import { initControls, updateControls, disposeControls, flipCamera } from '../three/CameraController.js'
 import { playCaptureEffect, playCheckEffect, clearCheckEffect, playCheckmateEffect } from '../three/CaptureEffect.js'
@@ -245,6 +245,13 @@ export default function GameScreen({ setGameResult, playerInfo, settings, setSet
           markDirty()
         })
         .catch(err => console.warn('Fiber2 model preload failed:', err))
+    } else if (settings.pieceStyle === 'neo_punk') {
+      preloadNeoPunkModels()
+        .then(() => {
+          if (sceneRef.current) rebuildPieces(sceneRef.current, pieceMapRef.current, 'neo_punk')
+          markDirty()
+        })
+        .catch(err => console.warn('Neo Punk model preload failed:', err))
     } else {
       rebuildPieces(sceneRef.current, pieceMapRef.current, settings.pieceStyle)
       markDirty()
@@ -750,6 +757,7 @@ export default function GameScreen({ setGameResult, playerInfo, settings, setSet
                     { id: 'vic2',      label: 'Vic2',      desc: 'Victorian+' },
                     { id: 'fiber',     label: 'Fiber',     desc: 'Fiber mat' },
                     { id: 'fiber2',    label: 'Fiber2',    desc: 'Purple/Sea' },
+                    { id: 'neo_punk',  label: 'Neo Punk',  desc: 'Cyber glow' },
                   ].map(s => (
                     <button
                       key={s.id}
