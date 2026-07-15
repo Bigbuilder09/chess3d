@@ -61,6 +61,8 @@ let chineseWhiteTex = null
 let chineseBlackTex = null
 let vic2WhiteTex = null
 let vic2BlackTex = null
+let neoPunkWhiteTex = null
+let neoPunkBlackTex = null
 
 export function preloadHiTextures() {
   if (hiPinkQueenTex) return
@@ -352,16 +354,18 @@ const NEO_PUNK_GLB_MAP = {
 const NEO_PUNK_MODEL_CACHE = {}
 const NEO_PUNK_SIZE = { p: 0.8, r: 1.3, n: 1.3, b: 1.3, q: 1.3, k: 1.3 }
 
-const _neoPunkTexLoader = new THREE.TextureLoader()
-const _neoPunkWhiteTex = _neoPunkTexLoader.load('/textures/neo_punk_white.jpg')
-const _neoPunkBlackTex = _neoPunkTexLoader.load('/textures/neo_punk_black.jpg')
-
-const NEO_PUNK_WHITE_MAT = () => new THREE.MeshMatcapMaterial({ matcap: _neoPunkWhiteTex })
-const NEO_PUNK_BLACK_MAT = () => new THREE.MeshMatcapMaterial({ matcap: _neoPunkBlackTex })
+function preloadNeoPunkTextures() {
+  if (neoPunkWhiteTex) return
+  neoPunkWhiteTex = texLoader.load('/textures/neo_punk_white.jpg')
+  neoPunkWhiteTex.colorSpace = THREE.SRGBColorSpace
+  neoPunkBlackTex = texLoader.load('/textures/neo_punk_black.jpg')
+  neoPunkBlackTex.colorSpace = THREE.SRGBColorSpace
+}
 
 let neoPunkLoadPromise = null
 export function preloadNeoPunkModels() {
   if (neoPunkLoadPromise) return neoPunkLoadPromise
+  preloadNeoPunkTextures()
   const entries = Object.entries(NEO_PUNK_GLB_MAP)
   neoPunkLoadPromise = (async () => {
     for (let i = 0; i < entries.length; i += 3) {
@@ -1154,7 +1158,10 @@ function createNeoPunkPiece(type, color, square, scene) {
     return createClassicPiece(type, color, square, scene)
   }
 
-  const mat = color === 'white' ? NEO_PUNK_WHITE_MAT() : NEO_PUNK_BLACK_MAT()
+  const tex = color === 'white' ? neoPunkWhiteTex : neoPunkBlackTex
+  const mat = tex
+    ? new THREE.MeshMatcapMaterial({ matcap: tex })
+    : new THREE.MeshPhysicalMaterial({ color: color === 'white' ? '#1A3A52' : '#06000E', roughness: 0.05, metalness: 0.1 })
   const inner = template.clone(true)
 
   if (t === 'k' || t === 'q' || t === 'b') inner.rotation.y = Math.PI
