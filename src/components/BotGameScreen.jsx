@@ -589,7 +589,7 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
                 </div>
 
                 <p className="text-ivory font-inter text-xs mb-2">Board Style</p>
-                <div className="flex gap-2">
+                <div className="grid grid-cols-3 gap-1.5 mb-1">
                   {[
                     { id: 'wood',   label: 'Wood',   color: '#6B4226' },
                     { id: 'marble', label: 'Marble', color: '#5A5A6A' },
@@ -601,7 +601,7 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
                     <button
                       key={b.id}
                       onClick={() => setSettings(prev => ({ ...prev, boardStyle: b.id }))}
-                      className={`flex-1 py-2 rounded text-xs font-inter border transition-all text-center
+                      className={`py-2 rounded text-xs font-inter border transition-all text-center
                         ${settings.boardStyle === b.id
                           ? 'border-gold text-gold bg-charcoal'
                           : 'border-carbon text-ash hover:border-ash hover:text-ivory'}`}
@@ -616,7 +616,7 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
                 </div>
 
                 <p className="text-ivory font-inter text-xs mt-3 mb-2">Board Model</p>
-                <div className="flex gap-2 mb-3">
+                <div className="grid grid-cols-3 gap-1.5 mb-3">
                   {[
                     { id: null,       label: 'Default' },
                     { id: 'pink',     label: 'Pink' },
@@ -628,7 +628,6 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
                     <button
                       key={bm.id ?? 'default'}
                       onClick={() => setSettings(prev => ({ ...prev, boardModel: bm.id }))}
-                      style={{ flex: 1 }}
                       className={`py-2 px-1 rounded text-xs font-inter border transition-all text-center
                         ${settings.boardModel === bm.id
                           ? 'border-gold text-gold bg-charcoal'
