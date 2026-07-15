@@ -625,6 +625,7 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
                     { id: 'chinese',  label: 'Chinese' },
                     { id: 'jade',     label: 'Jade' },
                     { id: 'jade2',    label: 'Jade 2' },
+                    { id: 'wood3d',   label: 'Wood 3D' },
                   ].map(bm => (
                     <button
                       key={bm.id ?? 'default'}
