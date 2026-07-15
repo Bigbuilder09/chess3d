@@ -67,6 +67,9 @@ const BOARD_MODEL_ROT_X = {
   vic: -Math.PI / 2,
 }
 
+// Force X and Z to the same target scale independently (fixes rectangular models)
+const BOARD_FORCE_SQUARE = new Set(['chinese'])
+
 let boardGroup = null
 const squareMeshes = {} // key: "a1" → mesh
 
@@ -279,7 +282,14 @@ export function setBoardModel(modelId) {
       const size = box.getSize(new THREE.Vector3())
       const maxDim = Math.max(size.x, size.z)
       const targetScale = BOARD_MODEL_SCALE[modelId] ?? 9.2
-      if (maxDim > 0) model.scale.setScalar(targetScale / maxDim)
+      if (maxDim > 0) {
+        if (BOARD_FORCE_SQUARE.has(modelId) && size.x > 0 && size.z > 0) {
+          // Scale X and Z independently so the playing area becomes a perfect square
+          model.scale.set(targetScale / size.x, targetScale / maxDim, targetScale / size.z)
+        } else {
+          model.scale.setScalar(targetScale / maxDim)
+        }
+      }
 
       // Center X/Z, sit base on y = -0.15 (same as procedural base)
       const box2 = new THREE.Box3().setFromObject(model)
