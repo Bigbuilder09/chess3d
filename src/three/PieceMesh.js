@@ -1158,7 +1158,7 @@ function createNeoPunkPiece(type, color, square, scene) {
     return createClassicPiece(type, color, square, scene)
   }
 
-  const tex = color === 'white' ? neoPunkWhiteTex : neoPunkBlackTex
+  const tex = color === 'white' ? neoPunkBlackTex : neoPunkWhiteTex
   const mat = tex
     ? new THREE.MeshMatcapMaterial({ matcap: tex })
     : new THREE.MeshPhysicalMaterial({ color: color === 'white' ? '#1A3A52' : '#06000E', roughness: 0.05, metalness: 0.1 })
