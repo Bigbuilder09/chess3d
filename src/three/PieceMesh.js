@@ -352,7 +352,7 @@ const NEO_PUNK_GLB_MAP = {
   k: '/models/neo_punk/king.glb',
 }
 const NEO_PUNK_MODEL_CACHE = {}
-const NEO_PUNK_SIZE = { p: 0.8, r: 1.3, n: 1.3, b: 1.3, q: 1.3, k: 1.3 }
+const NEO_PUNK_SIZE = { p: 0.64, r: 1.3, n: 1.3, b: 1.3, q: 1.3, k: 1.3 }
 
 function preloadNeoPunkTextures() {
   if (neoPunkWhiteTex) return
@@ -1164,7 +1164,8 @@ function createNeoPunkPiece(type, color, square, scene) {
     : new THREE.MeshPhysicalMaterial({ color: color === 'white' ? '#1A3A52' : '#06000E', roughness: 0.05, metalness: 0.1 })
   const inner = template.clone(true)
 
-  if (t === 'k' || t === 'q' || t === 'b') inner.rotation.y = Math.PI
+  // Knight exported sideways (+X axis) — rotate -90° so it faces forward
+  if (t === 'n') inner.rotation.y = -Math.PI / 2
 
   inner.traverse(child => {
     if (child.isMesh) {
