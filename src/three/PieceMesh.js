@@ -353,7 +353,7 @@ const NEO_PUNK_GLB_MAP = {
   k: '/models/neo_punk/king.glb',
 }
 const NEO_PUNK_MODEL_CACHE = {}
-const NEO_PUNK_SIZE = { p: 0.64, r: 1.3, n: 1.3, b: 1.3, q: 1.3, k: 1.3 }
+const NEO_PUNK_SIZE = { p: 0.70, r: 1.56, n: 1.3, b: 1.3, q: 1.3, k: 1.3 }
 
 function preloadNeoPunkTextures() {
   if (neoPunkWhiteTex) return
