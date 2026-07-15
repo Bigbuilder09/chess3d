@@ -52,6 +52,7 @@ const BOARD_MODELS = {
   vic:     '/boards/vic-board.glb',
   chinese: '/boards/chinese-board.glb',
   jade:    '/boards/jade-board.glb',
+  jade2:   '/boards/jade-board.glb',
 }
 
 const BOARD_MODEL_SCALE = {
@@ -60,6 +61,7 @@ const BOARD_MODEL_SCALE = {
   vic:      10.2,
   chinese:  9.6,
   jade:     8.28,
+  jade2:    8.28,
 }
 
 // Extra X rotation (radians) for models exported upright from Blender
@@ -69,6 +71,22 @@ const BOARD_MODEL_ROT_X = {
 
 // Force X and Z to the same target scale independently (fixes rectangular models)
 const BOARD_FORCE_SQUARE = new Set(['chinese'])
+
+// GLB used as frame only — procedural squares stay visible with these iridescent colors
+const BOARD_FRAME_COLORS = {
+  jade2: {
+    light:               '#E8A8D0',
+    lightRoughness:      0.08,
+    lightMetalness:      0.55,
+    lightEmissive:       '#B03888',
+    lightEmissiveIntensity: 0.4,
+    dark:                '#141578',
+    darkRoughness:       0.08,
+    darkMetalness:       0.55,
+    darkEmissive:        '#3828C8',
+    darkEmissiveIntensity: 0.5,
+  }
+}
 
 let boardGroup = null
 const squareMeshes = {} // key: "a1" → mesh
@@ -83,6 +101,8 @@ let edgeMaterial  = null
 let glbBoardMesh      = null
 let _boardLoadId      = 0
 let _proceduralHidden = false
+let _frameOnlyMode    = false   // true when jade2-style: GLB frame + colored squares on top
+let _currentBoardStyle = 'wood' // tracks last updateBoardStyle call for cleanup
 
 /**
  * Convert chess square ("a1") to (col, row) [0-7]
@@ -190,11 +210,15 @@ export function createBoard(scene, boardStyle = 'wood') {
  * Updates module-level material refs and marks them dirty.
  */
 export function updateBoardStyle(scene, boardStyle) {
+  _currentBoardStyle = boardStyle
+  if (_frameOnlyMode) return // frame mode owns square colors — don't override
+
   const style = BOARD_STYLES[boardStyle] || BOARD_STYLES.wood
 
   if (lightMaterial) {
     lightMaterial.color.set(style.light)
     lightMaterial.roughness = style.lightRoughness || 0.8
+    lightMaterial.metalness = 0.02
     lightMaterial.emissive.set(style.lightEmissive || '#000000')
     lightMaterial.emissiveIntensity = style.lightEmissiveIntensity || 0
     lightMaterial.needsUpdate = true
@@ -203,6 +227,7 @@ export function updateBoardStyle(scene, boardStyle) {
   if (darkMaterial) {
     darkMaterial.color.set(style.dark)
     darkMaterial.roughness = style.darkRoughness || 0.8
+    darkMaterial.metalness = 0.02
     darkMaterial.emissive.set(style.darkEmissive || '#000000')
     darkMaterial.emissiveIntensity = style.darkEmissiveIntensity || 0
     darkMaterial.needsUpdate = true
@@ -216,6 +241,10 @@ export function updateBoardStyle(scene, boardStyle) {
 
 // ─── GLB Board ────────────────────────────────────────────────────────────────
 
+function setSquareYOffset(y) {
+  Object.values(squareMeshes).forEach(m => { m.position.y = y })
+}
+
 function hideProceduralBoard() {
   _proceduralHidden = true
   for (const mat of [lightMaterial, darkMaterial, baseMaterial, edgeMaterial]) {
@@ -227,9 +256,74 @@ function hideProceduralBoard() {
   }
 }
 
+// Hide frame elements only (base + edge); keep squares visible for frame-only mode
+function hideProceduralFrame() {
+  _proceduralHidden = true
+  for (const mat of [baseMaterial, edgeMaterial]) {
+    if (!mat) continue
+    mat.transparent = true
+    mat.opacity     = 0
+    mat.depthWrite  = false
+    mat.needsUpdate = true
+  }
+}
+
+// Apply iridescent frame-only mode: color squares, raise them above GLB surface
+function applyFrameMode(colors) {
+  _frameOnlyMode = true
+  if (lightMaterial) {
+    lightMaterial.color.set(colors.light)
+    lightMaterial.roughness = colors.lightRoughness ?? 0.1
+    lightMaterial.metalness = colors.lightMetalness ?? 0.5
+    lightMaterial.emissive.set(colors.lightEmissive || '#000000')
+    lightMaterial.emissiveIntensity = colors.lightEmissiveIntensity || 0
+    lightMaterial.transparent = false
+    lightMaterial.opacity = 1
+    lightMaterial.depthWrite = true
+    lightMaterial.needsUpdate = true
+  }
+  if (darkMaterial) {
+    darkMaterial.color.set(colors.dark)
+    darkMaterial.roughness = colors.darkRoughness ?? 0.1
+    darkMaterial.metalness = colors.darkMetalness ?? 0.5
+    darkMaterial.emissive.set(colors.darkEmissive || '#000000')
+    darkMaterial.emissiveIntensity = colors.darkEmissiveIntensity || 0
+    darkMaterial.transparent = false
+    darkMaterial.opacity = 1
+    darkMaterial.depthWrite = true
+    darkMaterial.needsUpdate = true
+  }
+  setSquareYOffset(0.08) // sit above jade GLB tile surface to avoid z-fighting
+  hideProceduralFrame()
+}
+
 function restoreProceduralBoard() {
   if (!_proceduralHidden) return
   _proceduralHidden = false
+
+  if (_frameOnlyMode) {
+    _frameOnlyMode = false
+    setSquareYOffset(0)
+    // Restore square colors to the current board style
+    const style = BOARD_STYLES[_currentBoardStyle] || BOARD_STYLES.wood
+    if (lightMaterial) {
+      lightMaterial.color.set(style.light)
+      lightMaterial.roughness = style.lightRoughness || 0.8
+      lightMaterial.metalness = 0.02
+      lightMaterial.emissive.set(style.lightEmissive || '#000000')
+      lightMaterial.emissiveIntensity = style.lightEmissiveIntensity || 0
+      lightMaterial.needsUpdate = true
+    }
+    if (darkMaterial) {
+      darkMaterial.color.set(style.dark)
+      darkMaterial.roughness = style.darkRoughness || 0.8
+      darkMaterial.metalness = 0.02
+      darkMaterial.emissive.set(style.darkEmissive || '#000000')
+      darkMaterial.emissiveIntensity = style.darkEmissiveIntensity || 0
+      darkMaterial.needsUpdate = true
+    }
+  }
+
   for (const mat of [lightMaterial, darkMaterial, baseMaterial, edgeMaterial]) {
     if (!mat) continue
     mat.transparent = false
@@ -299,7 +393,12 @@ export function setBoardModel(modelId) {
       model.name = 'glbBoard'
       model.traverse(c => { if (c.isMesh) c.receiveShadow = true })
 
-      hideProceduralBoard()
+      const frameColors = BOARD_FRAME_COLORS[modelId]
+      if (frameColors) {
+        applyFrameMode(frameColors)
+      } else {
+        hideProceduralBoard()
+      }
       boardGroup.add(model)
       glbBoardMesh = model
       markDirty(4)

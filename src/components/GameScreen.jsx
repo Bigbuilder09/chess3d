@@ -802,6 +802,7 @@ export default function GameScreen({ setGameResult, playerInfo, settings, setSet
                     { id: 'vic',      label: 'Vic' },
                     { id: 'chinese',  label: 'Chinese' },
                     { id: 'jade',     label: 'Jade' },
+                    { id: 'jade2',    label: 'Jade 2' },
                   ].map(bm => (
                     <button
                       key={bm.id ?? 'default'}
