@@ -51,6 +51,19 @@ const BOARD_STYLES = {
     lightEmissive: '#B04888', lightEmissiveIntensity: 0.38,
     darkEmissive: '#2218C8', darkEmissiveIntensity: 0.48,
     tileHeight: 0.25
+  },
+  new_gen: {
+    light: '#E4B5D8', dark: '#0D0435', base: '#060120',
+    lightRoughness: 0.02, darkRoughness: 0.04,
+    lightMetalness: 0.08, darkMetalness: 0.22,
+    lightEmissive: '#C04898', lightEmissiveIntensity: 0.22,
+    darkEmissive: '#2010B5', darkEmissiveIntensity: 0.50,
+    tileHeight: 0.30,
+    materialType: 'physical',
+    lightClearcoat: 0.95, lightClearcoatRoughness: 0.02,
+    lightIridescence: 1.0, lightIridescenceIOR: 1.28,
+    darkClearcoat: 0.90,  darkClearcoatRoughness: 0.04,
+    darkIridescence: 0.75, darkIridescenceIOR: 1.50,
   }
 }
 
@@ -166,20 +179,45 @@ export function createBoard(scene, boardStyle = 'wood') {
   }
 
   // Squares
-  lightMaterial = new THREE.MeshStandardMaterial({
-    color: style.light,
-    roughness: style.lightRoughness || 0.8,
-    metalness: style.lightMetalness ?? 0.02,
-    emissive: style.lightEmissive ? new THREE.Color(style.lightEmissive) : new THREE.Color(0x000000),
-    emissiveIntensity: style.lightEmissiveIntensity || 0
-  })
-  darkMaterial = new THREE.MeshStandardMaterial({
-    color: style.dark,
-    roughness: style.darkRoughness || 0.8,
-    metalness: style.darkMetalness ?? 0.02,
-    emissive: style.darkEmissive ? new THREE.Color(style.darkEmissive) : new THREE.Color(0x000000),
-    emissiveIntensity: style.darkEmissiveIntensity || 0
-  })
+  if (style.materialType === 'physical') {
+    lightMaterial = new THREE.MeshPhysicalMaterial({
+      color: style.light,
+      roughness: style.lightRoughness ?? 0.02,
+      metalness: style.lightMetalness ?? 0.08,
+      emissive: new THREE.Color(style.lightEmissive || '#000000'),
+      emissiveIntensity: style.lightEmissiveIntensity || 0,
+      clearcoat: style.lightClearcoat ?? 0,
+      clearcoatRoughness: style.lightClearcoatRoughness ?? 0.1,
+      iridescence: style.lightIridescence ?? 0,
+      iridescenceIOR: style.lightIridescenceIOR ?? 1.3,
+    })
+    darkMaterial = new THREE.MeshPhysicalMaterial({
+      color: style.dark,
+      roughness: style.darkRoughness ?? 0.04,
+      metalness: style.darkMetalness ?? 0.22,
+      emissive: new THREE.Color(style.darkEmissive || '#000000'),
+      emissiveIntensity: style.darkEmissiveIntensity || 0,
+      clearcoat: style.darkClearcoat ?? 0,
+      clearcoatRoughness: style.darkClearcoatRoughness ?? 0.1,
+      iridescence: style.darkIridescence ?? 0,
+      iridescenceIOR: style.darkIridescenceIOR ?? 1.3,
+    })
+  } else {
+    lightMaterial = new THREE.MeshStandardMaterial({
+      color: style.light,
+      roughness: style.lightRoughness || 0.8,
+      metalness: style.lightMetalness ?? 0.02,
+      emissive: style.lightEmissive ? new THREE.Color(style.lightEmissive) : new THREE.Color(0x000000),
+      emissiveIntensity: style.lightEmissiveIntensity || 0
+    })
+    darkMaterial = new THREE.MeshStandardMaterial({
+      color: style.dark,
+      roughness: style.darkRoughness || 0.8,
+      metalness: style.darkMetalness ?? 0.02,
+      emissive: style.darkEmissive ? new THREE.Color(style.darkEmissive) : new THREE.Color(0x000000),
+      emissiveIntensity: style.darkEmissiveIntensity || 0
+    })
+  }
   const squareGeo = new THREE.BoxGeometry(1, tileH, 1)
 
   for (let row = 0; row < 8; row++) {
@@ -215,19 +253,31 @@ export function updateBoardStyle(scene, boardStyle) {
 
   if (lightMaterial) {
     lightMaterial.color.set(style.light)
-    lightMaterial.roughness = style.lightRoughness || 0.8
+    lightMaterial.roughness = style.lightRoughness ?? 0.8
     lightMaterial.metalness = style.lightMetalness ?? 0.02
     lightMaterial.emissive.set(style.lightEmissive || '#000000')
     lightMaterial.emissiveIntensity = style.lightEmissiveIntensity || 0
+    if ('clearcoat' in lightMaterial) {
+      lightMaterial.clearcoat = style.lightClearcoat ?? 0
+      lightMaterial.clearcoatRoughness = style.lightClearcoatRoughness ?? 0.1
+      lightMaterial.iridescence = style.lightIridescence ?? 0
+      lightMaterial.iridescenceIOR = style.lightIridescenceIOR ?? 1.3
+    }
     lightMaterial.needsUpdate = true
   }
 
   if (darkMaterial) {
     darkMaterial.color.set(style.dark)
-    darkMaterial.roughness = style.darkRoughness || 0.8
+    darkMaterial.roughness = style.darkRoughness ?? 0.8
     darkMaterial.metalness = style.darkMetalness ?? 0.02
     darkMaterial.emissive.set(style.darkEmissive || '#000000')
     darkMaterial.emissiveIntensity = style.darkEmissiveIntensity || 0
+    if ('clearcoat' in darkMaterial) {
+      darkMaterial.clearcoat = style.darkClearcoat ?? 0
+      darkMaterial.clearcoatRoughness = style.darkClearcoatRoughness ?? 0.1
+      darkMaterial.iridescence = style.darkIridescence ?? 0
+      darkMaterial.iridescenceIOR = style.darkIridescenceIOR ?? 1.3
+    }
     darkMaterial.needsUpdate = true
   }
 

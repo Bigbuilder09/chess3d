@@ -428,7 +428,8 @@ export default function LandingPage({ playerInfo, setPlayerInfo, botDifficulty, 
                 { id: 'blush',  label: 'Blush',  color: '#695a5b' },
                 { id: 'dawn',   label: 'Dawn',   color: '#c6cfe0' },
                 { id: 'pearl',  label: 'Pearl',  color: '#ead7d1' },
-                { id: 'gem',    label: 'Gem',    color: '#6018A8' },
+                { id: 'gem',     label: 'Gem',     color: '#6018A8' },
+                { id: 'new_gen', label: 'New Gen', color: '#9040B8' },
               ].map(b => (
                 <button
                   key={b.id}
