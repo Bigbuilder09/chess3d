@@ -345,10 +345,10 @@ export function preloadSteampunk1Models() {
 
 // ─── Neo Punk set ─────────────────────────────────────────────────────────────
 const NEO_PUNK_GLB_MAP = {
-  p: '/models/neo_punk/pawn.glb',
+  p: '/models/neo_punk/pawn2.glb',
   r: '/models/neo_punk/rook.glb',
-  n: '/models/neo_punk/knight.glb',
-  b: '/models/neo_punk/bishop.glb',
+  n: '/models/neo_punk/knight2.glb',
+  b: '/models/neo_punk/bishop2.glb',
   q: '/models/neo_punk/queen.glb',
   k: '/models/neo_punk/king.glb',
 }
