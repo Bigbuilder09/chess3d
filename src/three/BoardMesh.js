@@ -63,7 +63,7 @@ const BOARD_MODEL_SCALE = {
   chinese:  9.6,
   jade:     8.28,
   jade2:    8.28,
-  wood3d:   9.2,
+  wood3d:   10.12,
 }
 
 // Extra X rotation (radians) for models exported upright from Blender
