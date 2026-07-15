@@ -63,6 +63,7 @@ let vic2WhiteTex = null
 let vic2BlackTex = null
 let neoPunkWhiteTex = null
 let neoPunkBlackTex = null
+let neoPunkSilverTex = null
 
 export function preloadHiTextures() {
   if (hiPinkQueenTex) return
@@ -360,6 +361,8 @@ function preloadNeoPunkTextures() {
   neoPunkWhiteTex.colorSpace = THREE.SRGBColorSpace
   neoPunkBlackTex = texLoader.load('/textures/neo_punk_black.jpg')
   neoPunkBlackTex.colorSpace = THREE.SRGBColorSpace
+  neoPunkSilverTex = texLoader.load('/textures/neo_punk_silver.jpg')
+  neoPunkSilverTex.colorSpace = THREE.SRGBColorSpace
 }
 
 let neoPunkLoadPromise = null
@@ -1158,7 +1161,7 @@ function createNeoPunkPiece(type, color, square, scene) {
     return createClassicPiece(type, color, square, scene)
   }
 
-  const tex = color === 'white' ? neoPunkBlackTex : neoPunkWhiteTex
+  const tex = color === 'white' ? neoPunkSilverTex : neoPunkWhiteTex
   const mat = tex
     ? new THREE.MeshMatcapMaterial({ matcap: tex })
     : new THREE.MeshPhysicalMaterial({ color: color === 'white' ? '#1A3A52' : '#06000E', roughness: 0.05, metalness: 0.1 })
