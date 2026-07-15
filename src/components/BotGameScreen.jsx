@@ -561,8 +561,8 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
             </button>
             {settingsOpen && (
               <div
-                className="absolute top-full right-0 mt-1 p-4 rounded-xl z-50"
-                style={{ background: '#14141F', border: '1px solid #2A2A3C', width: 260 }}
+                className="absolute top-full right-0 mt-1 p-4 rounded-xl z-50 overflow-y-auto"
+                style={{ background: '#14141F', border: '1px solid #2A2A3C', width: 260, maxHeight: 'calc(100vh - 80px)' }}
               >
                 <p className="text-ash font-inter text-xs tracking-widest uppercase mb-3">Customize</p>
 
