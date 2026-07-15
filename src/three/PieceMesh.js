@@ -352,17 +352,19 @@ const NEO_PUNK_GLB_MAP = {
 const NEO_PUNK_MODEL_CACHE = {}
 const NEO_PUNK_SIZE = { p: 0.8, r: 1.3, n: 1.3, b: 1.3, q: 1.3, k: 1.3 }
 
-// White: chrome silver + hot-pink neon glow
+// White: iridescent teal-blue glass shell with inner fire-orange energy core
 const NEO_PUNK_WHITE_MAT = () => new THREE.MeshPhysicalMaterial({
-  color: '#C0C0C8', roughness: 0.08, metalness: 0.92,
-  clearcoat: 0.9, clearcoatRoughness: 0.05,
-  emissive: new THREE.Color('#FF1493'), emissiveIntensity: 0.5,
+  color: '#1A3A52', roughness: 0.04, metalness: 0.12,
+  clearcoat: 1.0, clearcoatRoughness: 0.01,
+  iridescence: 1.0, iridescenceIOR: 2.0,
+  emissive: new THREE.Color('#D04800'), emissiveIntensity: 1.3,
 })
-// Black: matte black + electric cyan neon glow
+// Black: dark void glass with purple-violet electricity inside
 const NEO_PUNK_BLACK_MAT = () => new THREE.MeshPhysicalMaterial({
-  color: '#0A0A12', roughness: 0.20, metalness: 0.75,
-  clearcoat: 0.7, clearcoatRoughness: 0.08,
-  emissive: new THREE.Color('#00FFCC'), emissiveIntensity: 0.6,
+  color: '#06000E', roughness: 0.05, metalness: 0.07,
+  clearcoat: 1.0, clearcoatRoughness: 0.02,
+  iridescence: 0.45, iridescenceIOR: 1.3,
+  emissive: new THREE.Color('#7200E0'), emissiveIntensity: 1.1,
 })
 
 let neoPunkLoadPromise = null
