@@ -74,6 +74,7 @@ const BOARD_MODELS = {
   chinese: '/boards/chinese-board.glb',
   jade:    '/boards/jade-board.glb',
   wood3d:  '/boards/wood-board.glb',
+  onyx:    '/boards/onyx-board.glb',
 }
 
 const BOARD_MODEL_SCALE = {
@@ -83,6 +84,7 @@ const BOARD_MODEL_SCALE = {
   chinese:  9.6,
   jade:     8.28,
   wood3d:   10.17,
+  onyx:     9.2,
 }
 
 // Extra X rotation (radians) for models exported upright from Blender

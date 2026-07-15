@@ -813,6 +813,7 @@ export default function GameScreen({ setGameResult, playerInfo, settings, setSet
                     { id: 'chinese',  label: 'Chinese' },
                     { id: 'jade',     label: 'Jade' },
                     { id: 'wood3d',   label: 'Wood 3D' },
+                    { id: 'onyx',     label: 'Onyx' },
                   ].map(bm => (
                     <button
                       key={bm.id ?? 'default'}
