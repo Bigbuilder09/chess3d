@@ -43,6 +43,14 @@ const BOARD_STYLES = {
     lightRoughness: 0.75, darkRoughness: 0.75,
     lightEmissive: null, lightEmissiveIntensity: 0,
     darkEmissive: null, darkEmissiveIntensity: 0
+  },
+  gem: {
+    light: '#DDA8CC', dark: '#12085A', base: '#06031A',
+    lightRoughness: 0.04, darkRoughness: 0.04,
+    lightMetalness: 0.55, darkMetalness: 0.55,
+    lightEmissive: '#B04888', lightEmissiveIntensity: 0.38,
+    darkEmissive: '#2218C8', darkEmissiveIntensity: 0.48,
+    tileHeight: 0.25
   }
 }
 
@@ -121,53 +129,64 @@ export function createBoard(scene, boardStyle = 'wood') {
   boardGroup = new THREE.Group()
   boardGroup.name = 'board'
 
-  // Board base
-  const baseGeo = new THREE.BoxGeometry(8.4, 0.2, 8.4)
+  // Tile dimensions — styles can define tileHeight for 3D block tiles
+  const tileH = style.tileHeight || 0.1
+  // If tileHeight is explicit, align tile top to y=0.1 (piece level); otherwise keep y=0 center
+  const tileYCenter = style.tileHeight ? (0.1 - tileH / 2) : 0
+
+  // Board base — deeper for tall tiles
+  const baseH = style.tileHeight ? (tileH + 0.1) : 0.2
+  const baseY = style.tileHeight ? (tileYCenter - tileH / 2 - baseH / 2) : -0.15
+  const baseGeo = new THREE.BoxGeometry(8.4, baseH, 8.4)
   baseMaterial = new THREE.MeshStandardMaterial({
     color: style.base,
     roughness: 0.9,
     metalness: 0.05
   })
   const base = new THREE.Mesh(baseGeo, baseMaterial)
-  base.position.set(0, -0.15, 0)
+  base.position.set(0, baseY, 0)
   base.receiveShadow = true
   base.castShadow = true
   boardGroup.add(base)
 
-  // Edge trim
-  const edgeGeo = new THREE.BoxGeometry(8.6, 0.05, 8.6)
-  edgeMaterial = new THREE.MeshStandardMaterial({
-    color: '#C8A96E',
-    roughness: 0.75,
-    metalness: 0.1
-  })
-  const edge = new THREE.Mesh(edgeGeo, edgeMaterial)
-  edge.position.set(0, -0.025, 0)
-  edge.receiveShadow = true
-  boardGroup.add(edge)
+  // Edge trim — only for flat-tile styles (hidden inside tall tiles)
+  if (!style.tileHeight) {
+    const edgeGeo = new THREE.BoxGeometry(8.6, 0.05, 8.6)
+    edgeMaterial = new THREE.MeshStandardMaterial({
+      color: '#C8A96E',
+      roughness: 0.75,
+      metalness: 0.1
+    })
+    const edge = new THREE.Mesh(edgeGeo, edgeMaterial)
+    edge.position.set(0, -0.025, 0)
+    edge.receiveShadow = true
+    boardGroup.add(edge)
+  } else {
+    edgeMaterial = null
+  }
 
   // Squares
   lightMaterial = new THREE.MeshStandardMaterial({
     color: style.light,
     roughness: style.lightRoughness || 0.8,
-    metalness: 0.02,
+    metalness: style.lightMetalness ?? 0.02,
     emissive: style.lightEmissive ? new THREE.Color(style.lightEmissive) : new THREE.Color(0x000000),
     emissiveIntensity: style.lightEmissiveIntensity || 0
   })
   darkMaterial = new THREE.MeshStandardMaterial({
     color: style.dark,
     roughness: style.darkRoughness || 0.8,
-    metalness: 0.02,
+    metalness: style.darkMetalness ?? 0.02,
     emissive: style.darkEmissive ? new THREE.Color(style.darkEmissive) : new THREE.Color(0x000000),
     emissiveIntensity: style.darkEmissiveIntensity || 0
   })
-  const squareGeo = new THREE.BoxGeometry(1, 0.1, 1)
+  const squareGeo = new THREE.BoxGeometry(1, tileH, 1)
 
   for (let row = 0; row < 8; row++) {
     for (let col = 0; col < 8; col++) {
       const isLight = (col + row) % 2 === 0
       const mesh = new THREE.Mesh(squareGeo, isLight ? lightMaterial : darkMaterial)
-      mesh.position.set(col - 3.5, 0, row - 3.5)
+      mesh.position.set(col - 3.5, tileYCenter, row - 3.5)
       mesh.receiveShadow = true
       mesh.castShadow = false
 
@@ -197,6 +216,7 @@ export function updateBoardStyle(scene, boardStyle) {
   if (lightMaterial) {
     lightMaterial.color.set(style.light)
     lightMaterial.roughness = style.lightRoughness || 0.8
+    lightMaterial.metalness = style.lightMetalness ?? 0.02
     lightMaterial.emissive.set(style.lightEmissive || '#000000')
     lightMaterial.emissiveIntensity = style.lightEmissiveIntensity || 0
     lightMaterial.needsUpdate = true
@@ -205,6 +225,7 @@ export function updateBoardStyle(scene, boardStyle) {
   if (darkMaterial) {
     darkMaterial.color.set(style.dark)
     darkMaterial.roughness = style.darkRoughness || 0.8
+    darkMaterial.metalness = style.darkMetalness ?? 0.02
     darkMaterial.emissive.set(style.darkEmissive || '#000000')
     darkMaterial.emissiveIntensity = style.darkEmissiveIntensity || 0
     darkMaterial.needsUpdate = true
