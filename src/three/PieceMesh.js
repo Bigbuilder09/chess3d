@@ -1167,8 +1167,8 @@ function createNeoPunkPiece(type, color, square, scene) {
     : new THREE.MeshPhysicalMaterial({ color: color === 'white' ? '#1A3A52' : '#06000E', roughness: 0.05, metalness: 0.1 })
   const inner = template.clone(true)
 
-  // Knight exported sideways (+X axis) — rotate -90° so it faces forward
-  if (t === 'n') inner.rotation.y = -Math.PI / 2
+  if (t === 'k' || t === 'q') inner.rotation.y = -Math.PI / 2  // face right
+  if (t === 'n') inner.rotation.y = Math.PI / 2               // face left
 
   inner.traverse(child => {
     if (child.isMesh) {
