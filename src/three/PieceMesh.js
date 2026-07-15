@@ -352,20 +352,12 @@ const NEO_PUNK_GLB_MAP = {
 const NEO_PUNK_MODEL_CACHE = {}
 const NEO_PUNK_SIZE = { p: 0.8, r: 1.3, n: 1.3, b: 1.3, q: 1.3, k: 1.3 }
 
-// White: iridescent teal-blue glass shell with inner fire-orange energy core
-const NEO_PUNK_WHITE_MAT = () => new THREE.MeshPhysicalMaterial({
-  color: '#1A3A52', roughness: 0.04, metalness: 0.12,
-  clearcoat: 1.0, clearcoatRoughness: 0.01,
-  iridescence: 1.0, iridescenceIOR: 2.0,
-  emissive: new THREE.Color('#D04800'), emissiveIntensity: 1.3,
-})
-// Black: dark void glass with purple-violet electricity inside
-const NEO_PUNK_BLACK_MAT = () => new THREE.MeshPhysicalMaterial({
-  color: '#06000E', roughness: 0.05, metalness: 0.07,
-  clearcoat: 1.0, clearcoatRoughness: 0.02,
-  iridescence: 0.45, iridescenceIOR: 1.3,
-  emissive: new THREE.Color('#7200E0'), emissiveIntensity: 1.1,
-})
+const _neoPunkTexLoader = new THREE.TextureLoader()
+const _neoPunkWhiteTex = _neoPunkTexLoader.load('/textures/neo_punk_white.jpg')
+const _neoPunkBlackTex = _neoPunkTexLoader.load('/textures/neo_punk_black.jpg')
+
+const NEO_PUNK_WHITE_MAT = () => new THREE.MeshMatcapMaterial({ matcap: _neoPunkWhiteTex })
+const NEO_PUNK_BLACK_MAT = () => new THREE.MeshMatcapMaterial({ matcap: _neoPunkBlackTex })
 
 let neoPunkLoadPromise = null
 export function preloadNeoPunkModels() {
