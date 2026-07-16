@@ -80,7 +80,7 @@ export function initScene(canvas) {
     alpha: false
   })
   renderer.setSize(canvas.clientWidth, canvas.clientHeight, false)
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5))
   renderer.shadowMap.enabled = true
   renderer.shadowMap.type = THREE.PCFSoftShadowMap
   renderer.toneMapping = THREE.ACESFilmicToneMapping
@@ -114,7 +114,7 @@ export function initScene(canvas) {
   composer.addPass(new RenderPass(scene, camera))
 
   const bloomPass = new UnrealBloomPass(
-    new THREE.Vector2(canvas.clientWidth, canvas.clientHeight),
+    new THREE.Vector2(canvas.clientWidth / 2, canvas.clientHeight / 2),
     0.4,
     0.3,
     0.7

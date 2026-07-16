@@ -872,8 +872,8 @@ function createGLBPiece(type, color, square, scene) {
   inner.traverse(child => {
     if (child.isMesh) {
       child.material = mat
-      child.castShadow = true
-      child.receiveShadow = !tex
+      child.castShadow = false
+      child.receiveShadow = false
     }
   })
 
@@ -1173,8 +1173,8 @@ function createNeoPunkPiece(type, color, square, scene) {
   inner.traverse(child => {
     if (child.isMesh) {
       child.material = mat
-      child.castShadow = true
-      child.receiveShadow = true
+      child.castShadow = !tex
+      child.receiveShadow = !tex
     }
   })
 
@@ -1221,8 +1221,8 @@ function createChinesePiece(type, color, square, scene) {
   inner.traverse(child => {
     if (child.isMesh) {
       child.material = mat
-      child.castShadow = true
-      child.receiveShadow = !tex
+      child.castShadow = false
+      child.receiveShadow = false
     }
   })
 
@@ -1329,8 +1329,8 @@ function createJapanPiece(type, color, square, scene) {
   inner.traverse(child => {
     if (child.isMesh) {
       child.material = mat
-      child.castShadow = true
-      child.receiveShadow = tex ? false : true
+      child.castShadow = false
+      child.receiveShadow = false
     }
   })
 
@@ -1419,8 +1419,8 @@ function createVic2Piece(type, color, square, scene) {
   inner.traverse(child => {
     if (child.isMesh) {
       if (mat) child.material = mat
-      child.castShadow = true
-      child.receiveShadow = !tex
+      child.castShadow = false
+      child.receiveShadow = false
     }
   })
 
@@ -1467,8 +1467,8 @@ function createFiberPiece(type, color, square, scene) {
   inner.traverse(child => {
     if (child.isMesh) {
       child.material = mat
-      child.castShadow = true
-      child.receiveShadow = !tex
+      child.castShadow = false
+      child.receiveShadow = false
     }
   })
 
@@ -1515,8 +1515,8 @@ function createFiber2Piece(type, color, square, scene) {
   inner.traverse(child => {
     if (child.isMesh) {
       child.material = mat
-      child.castShadow = true
-      child.receiveShadow = !tex
+      child.castShadow = false
+      child.receiveShadow = false
     }
   })
 
