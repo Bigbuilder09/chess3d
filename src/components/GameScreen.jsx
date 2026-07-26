@@ -63,6 +63,7 @@ export default function GameScreen({ setGameResult, playerInfo, settings, setSet
   const raycaster    = useRef(new THREE.Raycaster())
   const mouse        = useRef(new THREE.Vector2())
   const isAnimating  = useRef(false)
+  const lastMoveRef  = useRef(null)
   // Keep a ref to latest settings so async callbacks always see current values
   const settingsRef  = useRef(settings)
 
@@ -272,6 +273,7 @@ export default function GameScreen({ setGameResult, playerInfo, settings, setSet
   useEffect(() => {
     const off1 = on('move_made', async (data) => {
       const { from, to, captured, isCheck: check, isCheckmate: mate } = data
+      lastMoveRef.current = { from, to }
 
       applyServerMove(data)
       setCurrentTurn(prev => prev === 'white' ? 'black' : 'white')
@@ -469,6 +471,11 @@ export default function GameScreen({ setGameResult, playerInfo, settings, setSet
     setMyDrawOfferSent(false)
     setDrawOffered(false)
     sessionStorage.setItem('last_color', myColor)
+    sessionStorage.setItem('game_type', 'online')
+    sessionStorage.setItem('review_data', JSON.stringify({
+      fen: chess.current.fen(),
+      lastMove: lastMoveRef.current,
+    }))
     const outcome =
       go.winner === myColor ? 'win' :
       go.winner === null    ? 'draw' :

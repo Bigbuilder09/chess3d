@@ -30,6 +30,7 @@ function GoldParticles() {
 
 export default function EndScreen({ result }) {
   const navigate = useNavigate()
+  const gameType = sessionStorage.getItem('game_type') || 'online'
 
   if (!result) {
     // Fallback — shouldn't happen normally
@@ -128,11 +129,18 @@ export default function EndScreen({ result }) {
         {/* Buttons */}
         <div className="flex flex-col gap-3">
           <button
-            onClick={() => navigate('/matchmaking')}
+            onClick={() => navigate(gameType === 'bot' ? '/bot-game' : '/matchmaking')}
             className="w-full py-4 font-cinzel font-bold tracking-widest text-obsidian rounded transition-all hover:brightness-110 hover:scale-105 active:scale-95"
             style={{ background: '#C8A96E', boxShadow: '0 0 20px rgba(200,169,110,0.3)' }}
           >
-            REMATCH
+            PLAY AGAIN
+          </button>
+          <button
+            onClick={() => navigate('/review')}
+            className="w-full py-3 font-inter text-sm tracking-widest rounded border transition-all hover:scale-105 active:scale-95"
+            style={{ borderColor: '#4A6A9C', color: '#7BA7DC', background: 'rgba(74,106,156,0.1)' }}
+          >
+            REVIEW LAST MOVE
           </button>
           <button
             onClick={() => navigate('/')}

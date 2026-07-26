@@ -5,6 +5,7 @@ import MatchmakingScreen from './components/MatchmakingScreen.jsx'
 import GameScreen from './components/GameScreen.jsx'
 import EndScreen from './components/EndScreen.jsx'
 import BotGameScreen from './components/BotGameScreen.jsx'
+import ReviewScreen from './components/ReviewScreen.jsx'
 
 export default function App() {
   const [gameResult, setGameResult] = useState(null)
@@ -57,8 +58,13 @@ export default function App() {
             playerInfo={playerInfo}
             settings={settings}
             setSettings={setSettings}
+            setGameResult={setGameResult}
           />
         }
+      />
+      <Route
+        path="/review"
+        element={<ReviewScreen settings={settings} />}
       />
     </Routes>
   )

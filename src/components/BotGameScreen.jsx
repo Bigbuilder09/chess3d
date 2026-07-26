@@ -35,7 +35,7 @@ function initBoardPieces(scene, style = 'classic') {
   return pieceMap
 }
 
-export default function BotGameScreen({ difficulty = 'medium', playerInfo, settings, setSettings }) {
+export default function BotGameScreen({ difficulty = 'medium', playerInfo, settings, setSettings, setGameResult }) {
   const navigate = useNavigate()
   const canvasRef = useRef(null)
   const animFrameRef = useRef(null)
@@ -48,6 +48,7 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
   const isAnimating = useRef(false)
   const botThinkingRef = useRef(false)
   const localChessRef = useRef(new Chess())
+  const lastMoveRef = useRef(null)
   const { getMove } = useStockfish()
   // Keep a ref to latest settings so async callbacks always see current values
   const settingsRef = useRef(settings)
@@ -228,6 +229,7 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
     const controls = controlsRef.current
     const map = pieceMapRef.current
     const { from, to, captured, flags, promotion, san } = moveResult
+    lastMoveRef.current = { from, to }
     const movedColor = moveResult.color === 'w' ? 'white' : 'black'
 
     const data = {
@@ -343,11 +345,14 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
         ? (chess.turn() === (myColor==='white'?'b':'w') ? 'win' : 'lose')
         : 'draw'
       const go = { winner: mate ? (outcome==='win' ? myColor : botColor) : null, reason: mate ? 'checkmate' : 'draw' }
+      sessionStorage.setItem('game_type', 'bot')
+      sessionStorage.setItem('review_data', JSON.stringify({ fen: chess.fen(), lastMove: lastMoveRef.current }))
       setGameOver(go)
       playGameEndSound(outcome)
-      setTimeout(() => navigate('/'), 3000)
+      setGameResult?.({ outcome, reason: go.reason, stats: { moves: chess.history().length } })
+      setTimeout(() => navigate('/end'), 3000)
     }
-  }, [applyServerMove, myColor, botColor, navigate, setGameOver])
+  }, [applyServerMove, myColor, botColor, navigate, setGameOver, setGameResult])
 
   // ── Bot move ──────────────────────────────────────────────────────────────
   const makeBotMove = useCallback(() => {
@@ -522,9 +527,13 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
 
   // ── Resign ────────────────────────────────────────────────────────────────
   const handleBotResign = () => {
+    const chess = localChessRef.current
+    sessionStorage.setItem('game_type', 'bot')
+    sessionStorage.setItem('review_data', JSON.stringify({ fen: chess.fen(), lastMove: lastMoveRef.current }))
+    setGameResult?.({ outcome: 'lose', reason: 'resignation', stats: { moves: chess.history().length } })
     setGameOver({ winner: botColor, reason: 'resignation' })
     playGameEndSound('lose')
-    setTimeout(() => navigate('/'), 3000)
+    setTimeout(() => navigate('/end'), 3000)
   }
 
   return (
