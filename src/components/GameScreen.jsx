@@ -470,6 +470,7 @@ export default function GameScreen({ setGameResult, playerInfo, settings, setSet
     setGameOver(go)
     setMyDrawOfferSent(false)
     setDrawOffered(false)
+    sessionStorage.removeItem('game_data')
     sessionStorage.setItem('last_color', myColor)
     sessionStorage.setItem('game_type', 'online')
     sessionStorage.setItem('review_data', JSON.stringify({

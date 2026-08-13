@@ -97,6 +97,11 @@ export default function MatchmakingScreen({ playerInfo }) {
     return () => clearInterval(interval)
   }, [])
 
+  // Clear stale game_data so the connect listener doesn't attempt a false rejoin
+  useEffect(() => {
+    sessionStorage.removeItem('game_data')
+  }, [])
+
   // Socket events — run once on mount only; capture playerInfo at mount time
   useEffect(() => {
     const playerId = getOrCreatePlayerId()

@@ -12,21 +12,25 @@ export function useSocket() {
     if (!sharedSocket || sharedSocket.disconnected) {
       sharedSocket = io(SOCKET_URL, {
         transports: ['websocket', 'polling'],
-        reconnectionAttempts: 5
+        reconnectionAttempts: Infinity,
+        reconnectionDelay: 1000,
+        reconnectionDelayMax: 5000
       })
     }
     socketRef.current = sharedSocket
 
-    const handleReconnect = () => {
+    const handleRejoin = () => {
       try {
         const { gameId, playerId } = JSON.parse(sessionStorage.getItem('game_data') || '{}')
         if (gameId && playerId) sharedSocket.emit('rejoin_game', { gameId, playerId })
       } catch {}
     }
-    sharedSocket.on('reconnect', handleReconnect)
+    sharedSocket.on('reconnect', handleRejoin)
+    sharedSocket.on('connect', handleRejoin)
 
     return () => {
-      sharedSocket.off('reconnect', handleReconnect)
+      sharedSocket.off('reconnect', handleRejoin)
+      sharedSocket.off('connect', handleRejoin)
     }
   }, [])
 
