@@ -53,6 +53,11 @@ io.on('connection', (socket) => {
     console.log(`[QUEUE] ${name} (${rating}) joined queue preferredColor=${preferredColor}`)
     const match = joinQueue(playerId, rating || 1200, name || 'Guest', socket.id, preferredColor)
 
+    if (match === false) {
+      socket.emit('queue_rejected', { reason: 'already_in_game' })
+      return
+    }
+
     if (match) {
       const { gameId, white, black } = match
 

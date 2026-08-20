@@ -23,6 +23,7 @@ export default function MatchmakingScreen({ playerInfo }) {
 
   const [elapsed, setElapsed] = useState(0)
   const [connected, setConnected] = useState(false)
+  const [retrying, setRetrying] = useState(false)
   const [ratingRange, setRatingRange] = useState(150)
   const [matchFound, setMatchFound] = useState(null)
   const [countdown, setCountdown] = useState(3)
@@ -31,6 +32,7 @@ export default function MatchmakingScreen({ playerInfo }) {
   const animFrameRef = useRef(null)
   const startTimeRef = useRef(Date.now())
   const cancelledRef = useRef(false)
+  const retryRef = useRef(null)
 
   // Spinning knight canvas
   useEffect(() => {
@@ -120,6 +122,9 @@ export default function MatchmakingScreen({ playerInfo }) {
     sock?.on('connect', doJoin)
     if (sock?.connected) doJoin()
 
+    const handleDisconnect = () => setConnected(false)
+    sock?.on('disconnect', handleDisconnect)
+
     const offMatchFound = on('match_found', (data) => {
       if (!cancelledRef.current) setMatchFound(data)
     })
@@ -128,10 +133,25 @@ export default function MatchmakingScreen({ playerInfo }) {
       if (!cancelledRef.current) setGameData(data)
     })
 
+    const offQueueRejected = on('queue_rejected', () => {
+      if (!cancelledRef.current) {
+        setRetrying(true)
+        retryRef.current = setTimeout(() => {
+          if (!cancelledRef.current) {
+            setRetrying(false)
+            emit('join_queue', { playerId, rating, name, preferredColor })
+          }
+        }, 5000)
+      }
+    })
+
     return () => {
       sock?.off('connect', doJoin)
+      sock?.off('disconnect', handleDisconnect)
       offMatchFound?.()
       offGameStart?.()
+      offQueueRejected?.()
+      clearTimeout(retryRef.current)
       emit('leave_queue', { playerId })
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -228,6 +248,11 @@ export default function MatchmakingScreen({ playerInfo }) {
           <div className="text-amber-400 font-inter text-xs mb-3 flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse inline-block" />
             Connecting to server…
+          </div>
+        ) : retrying ? (
+          <div className="text-amber-400 font-inter text-xs mb-3 flex items-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse inline-block" />
+            Retrying in 5s…
           </div>
         ) : (
           <div className="text-emerald-400 font-inter text-xs mb-3 flex items-center gap-2">

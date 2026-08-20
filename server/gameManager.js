@@ -16,7 +16,7 @@ export function joinQueue(playerId, rating, name, socketId, preferredColor) {
   )
   if (alreadyInGame) {
     console.log(`[QUEUE REJECTED] ${name} (${playerId}) already in active game`)
-    return null
+    return false
   }
 
   // Remove any existing entry for this player
