@@ -88,9 +88,9 @@ const BOARD_MODEL_SCALE = {
   jade:        8.28,
   wood3d:      10.17,
   onyx:        9.2,
-  pink_purple: 9.2,
-  old_school:  9.2,
-  jade2:       9.2,
+  pink_purple: 7.5,
+  old_school:  7.5,
+  jade2:       7.5,
 }
 
 // Extra X rotation (radians) for models exported upright from Blender
