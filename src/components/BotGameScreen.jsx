@@ -637,14 +637,17 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
                 <p className="text-ivory font-inter text-xs mt-3 mb-2">Board Model</p>
                 <div className="grid grid-cols-3 gap-1.5 mb-3">
                   {[
-                    { id: null,       label: 'Default' },
-                    { id: 'pink',     label: 'Pink' },
-                    { id: 'historic', label: 'Historic' },
-                    { id: 'vic',      label: 'Vic' },
-                    { id: 'chinese',  label: 'Chinese' },
-                    { id: 'jade',     label: 'Jade' },
-                    { id: 'wood3d',   label: 'Wood 3D' },
-                    { id: 'onyx',     label: 'Onyx' },
+                    { id: null,          label: 'Default' },
+                    { id: 'pink',        label: 'Pink' },
+                    { id: 'historic',    label: 'Historic' },
+                    { id: 'vic',         label: 'Vic' },
+                    { id: 'chinese',     label: 'Chinese' },
+                    { id: 'jade',        label: 'Jade' },
+                    { id: 'wood3d',      label: 'Wood 3D' },
+                    { id: 'onyx',        label: 'Onyx' },
+                    { id: 'pink_purple', label: 'Pink Purple' },
+                    { id: 'old_school',  label: 'Old School' },
+                    { id: 'jade2',       label: 'Jade II' },
                   ].map(bm => (
                     <button
                       key={bm.id ?? 'default'}

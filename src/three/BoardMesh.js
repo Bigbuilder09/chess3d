@@ -68,23 +68,29 @@ const BOARD_STYLES = {
 }
 
 const BOARD_MODELS = {
-  pink:    '/boards/pink-board.glb',
-  historic:'/boards/historic-board.glb',
-  vic:     '/boards/vic-board.glb',
-  chinese: '/boards/chinese-board.glb',
-  jade:    '/boards/jade-board.glb',
-  wood3d:  '/boards/wood-board.glb',
-  onyx:    '/boards/onyx-board.glb',
+  pink:        '/boards/pink-board.glb',
+  historic:    '/boards/historic-board.glb',
+  vic:         '/boards/vic-board.glb',
+  chinese:     '/boards/chinese-board.glb',
+  jade:        '/boards/jade-board.glb',
+  wood3d:      '/boards/wood-board.glb',
+  onyx:        '/boards/onyx-board.glb',
+  pink_purple: '/boards/pink-purple-board.glb',
+  old_school:  '/boards/old-school-board.glb',
+  jade2:       '/boards/jade2-board.glb',
 }
 
 const BOARD_MODEL_SCALE = {
-  pink:     9.2,
-  historic: 10.2,
-  vic:      10.2,
-  chinese:  9.6,
-  jade:     8.28,
-  wood3d:   10.17,
-  onyx:     9.2,
+  pink:        9.2,
+  historic:    10.2,
+  vic:         10.2,
+  chinese:     9.6,
+  jade:        8.28,
+  wood3d:      10.17,
+  onyx:        9.2,
+  pink_purple: 9.2,
+  old_school:  9.2,
+  jade2:       9.2,
 }
 
 // Extra X rotation (radians) for models exported upright from Blender
