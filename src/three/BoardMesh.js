@@ -97,7 +97,8 @@ const BOARD_MODEL_SCALE = {
 
 // Extra X rotation (radians) for models exported upright from Blender
 const BOARD_MODEL_ROT_X = {
-  vic: -Math.PI / 2,
+  vic:        -Math.PI / 2,
+  fancy_punk: -Math.PI / 2,
 }
 
 // Force X and Z to the same target scale independently (fixes rectangular models)
