@@ -642,7 +642,6 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
                     { id: 'historic',    label: 'Historic' },
                     { id: 'vic',         label: 'Vic' },
                     { id: 'chinese',     label: 'Chinese' },
-                    { id: 'jade',        label: 'Jade' },
                     { id: 'wood3d',      label: 'Wood 3D' },
                     { id: 'onyx',        label: 'Onyx' },
                     { id: 'pink_purple', label: 'Pink Purple' },
