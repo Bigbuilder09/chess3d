@@ -78,6 +78,7 @@ const BOARD_MODELS = {
   pink_purple: '/boards/pink-purple-board.glb',
   old_school:  '/boards/old-school-board.glb',
   jade2:       '/boards/jade2-board.glb',
+  fancy_punk:  '/boards/fancy-punk-board.glb',
 }
 
 const BOARD_MODEL_SCALE = {
@@ -91,6 +92,7 @@ const BOARD_MODEL_SCALE = {
   pink_purple: 8.0,
   old_school:  8.0,
   jade2:       8.0,
+  fancy_punk:  8.0,
 }
 
 // Extra X rotation (radians) for models exported upright from Blender
