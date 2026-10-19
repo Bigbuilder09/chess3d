@@ -151,6 +151,35 @@ export function useChessGame(playerColor) {
   }, [chess])
 
   /**
+   * Restore the full game state after a rejoin: position, move list and
+   * captured pieces. history: [{ san, captured, color: 'w'|'b' }]
+   */
+  const loadState = useCallback(({ fen, history = [] }) => {
+    try {
+      chess.load(fen)
+    } catch (e) {
+      console.error('Failed to load FEN:', e)
+      return
+    }
+    setFen(fen)
+    setIsCheck(chess.isCheck())
+    setIsCheckmate(chess.isCheckmate())
+    setIsDraw(chess.isDraw())
+    setSelectedSquare(null)
+    setLegalMoves([])
+
+    const pairs = []
+    const captured = { white: [], black: [] }
+    history.forEach((m, i) => {
+      if (i % 2 === 0) pairs.push({ number: pairs.length + 1, white: m.san, black: null })
+      else pairs[pairs.length - 1].black = m.san
+      if (m.captured) captured[m.color === 'w' ? 'white' : 'black'].push(m.captured)
+    })
+    setMoves(pairs)
+    setCapturedPieces(captured)
+  }, [chess])
+
+  /**
    * Get all pieces on the board from the FEN.
    */
   const getBoardState = useCallback(() => {
@@ -190,6 +219,7 @@ export function useChessGame(playerColor) {
     needsPromotion,
     resetGame,
     loadFen,
+    loadState,
     getBoardState
   }
 }

@@ -6,13 +6,15 @@ import {
   joinQueue,
   leaveQueue,
   scanQueue,
+  abandonGames,
   processMove,
   handleDisconnect,
   rejoinGame,
   offerDraw,
+  declineDraw,
   resignGame,
-  getGame,
-  handleTimeout
+  sweepTimeouts,
+  START_DELAY_MS
 } from './gameManager.js'
 
 const app = express()
@@ -35,8 +37,42 @@ const io = new Server(httpServer, {
 // Online player count
 let onlinePlayers = 0
 
+function announceMatch({ gameId, white, black }) {
+  io.to(white.socketId).emit('match_found', {
+    opponent: { name: black.name, rating: black.rating },
+    color: 'white',
+    gameId
+  })
+  io.to(black.socketId).emit('match_found', {
+    opponent: { name: white.name, rating: white.rating },
+    color: 'black',
+    gameId
+  })
+
+  setTimeout(() => {
+    io.to(white.socketId).emit('game_start', { color: 'white', gameId })
+    io.to(black.socketId).emit('game_start', { color: 'black', gameId })
+    console.log(`[GAME START] ${gameId}`)
+  }, START_DELAY_MS)
+}
+
+function broadcastGameOver({ whiteSocketId, blackSocketId }, payload) {
+  io.to(whiteSocketId).emit('game_over', payload)
+  io.to(blackSocketId).emit('game_over', payload)
+}
+
+function runTimeoutSweep() {
+  for (const r of sweepTimeouts()) {
+    broadcastGameOver(r, { reason: 'timeout', winner: r.winner })
+    console.log(`[TIMEOUT] ${r.gameId} winner=${r.winner}`)
+  }
+}
+
 // Scan queue every 5 seconds for expanded-tolerance matches
-setInterval(() => scanQueue(io), 5000)
+setInterval(() => scanQueue().forEach(announceMatch), 5000)
+
+// #5: the server owns the clock — flag players who run out of time
+setInterval(runTimeoutSweep, 500)
 
 io.on('connection', (socket) => {
   onlinePlayers++
@@ -51,33 +87,15 @@ io.on('connection', (socket) => {
   // --- MATCHMAKING ---
   socket.on('join_queue', ({ playerId, rating, name, preferredColor }) => {
     console.log(`[QUEUE] ${name} (${rating}) joined queue preferredColor=${preferredColor}`)
+
+    // #3: a player who queues again has left any game they were still in
+    for (const r of abandonGames(playerId)) {
+      broadcastGameOver(r, { reason: r.reason, winner: r.winner })
+      console.log(`[ABANDON] ${r.gameId} winner=${r.winner}`)
+    }
+
     const match = joinQueue(playerId, rating || 1200, name || 'Guest', socket.id, preferredColor)
-
-    if (match === false) {
-      socket.emit('queue_rejected', { reason: 'already_in_game' })
-      return
-    }
-
-    if (match) {
-      const { gameId, white, black } = match
-
-      io.to(white.socketId).emit('match_found', {
-        opponent: { name: black.name, rating: black.rating },
-        color: 'white',
-        gameId
-      })
-      io.to(black.socketId).emit('match_found', {
-        opponent: { name: white.name, rating: white.rating },
-        color: 'black',
-        gameId
-      })
-
-      setTimeout(() => {
-        io.to(white.socketId).emit('game_start', { color: 'white', gameId })
-        io.to(black.socketId).emit('game_start', { color: 'black', gameId })
-        console.log(`[GAME START] ${gameId}`)
-      }, 3000)
-    }
+    if (match) announceMatch(match)
   })
 
   socket.on('leave_queue', ({ playerId }) => {
@@ -102,24 +120,20 @@ io.on('connection', (socket) => {
     console.log(`[MOVE] ${gameId} ${from}-${to} ${data.san}`)
 
     if (data.gameOver) {
-      io.to(whiteSocketId).emit('game_over', data.gameOver)
-      io.to(blackSocketId).emit('game_over', data.gameOver)
+      broadcastGameOver(result, data.gameOver)
       console.log(`[GAME OVER] ${gameId} winner=${data.gameOver.winner}`)
     }
   })
 
   // --- DRAW ---
   socket.on('offer_draw', ({ gameId, playerId }) => {
-    console.log(`[DRAW OFFER] gameId=${gameId} playerId=${playerId} socketId=${socket.id}`)
     const result = offerDraw(gameId, playerId, socket.id)
-    console.log(`[DRAW OFFER RESULT]`, result ? (result.accepted ? 'accepted' : 'sent to opponent') : 'failed')
     if (!result) return
 
     if (result.accepted) {
-      io.to(result.whiteSocketId).emit('draw_accepted')
-      io.to(result.blackSocketId).emit('draw_accepted')
-      io.to(result.whiteSocketId).emit('game_over', { reason: 'draw', winner: null })
-      io.to(result.blackSocketId).emit('game_over', { reason: 'draw', winner: null })
+      // #7: send a single game_over — clients no longer need 'draw_accepted'
+      broadcastGameOver(result, { reason: 'draw', winner: null })
+      console.log(`[DRAW AGREED] ${gameId}`)
     } else {
       io.to(result.opponentSocketId).emit('draw_offered')
       socket.emit('draw_offer_sent') // confirm to the offerer
@@ -127,14 +141,8 @@ io.on('connection', (socket) => {
   })
 
   socket.on('decline_draw', ({ gameId, playerId }) => {
-    // C1: Send only to the player who offered the draw (the opponent of the decliner)
-    const game = getGame(gameId)
-    if (!game) return
-    const offererSocketId =
-      game.white.playerId === playerId ? game.black.socketId : game.white.socketId
-    // Clear the pending offer so a fresh offer can be made later
-    game.drawOfferedBy = null
-    io.to(offererSocketId).emit('draw_declined')
+    const offererSocketId = declineDraw(gameId, playerId, socket.id)
+    if (offererSocketId) io.to(offererSocketId).emit('draw_declined')
   })
 
   // --- RESIGN ---
@@ -142,21 +150,14 @@ io.on('connection', (socket) => {
     const result = resignGame(gameId, playerId, socket.id)
     if (!result) return
 
-    const { winner, reason, whiteSocketId, blackSocketId } = result
-    io.to(whiteSocketId).emit('game_over', { reason, winner })
-    io.to(blackSocketId).emit('game_over', { reason, winner })
-    console.log(`[RESIGN] ${gameId} winner=${winner}`)
+    broadcastGameOver(result, { reason: result.reason, winner: result.winner })
+    console.log(`[RESIGN] ${gameId} winner=${result.winner}`)
   })
 
   // --- TIMEOUT ---
-  socket.on('timeout', ({ gameId, playerId }) => {
-    const result = handleTimeout(gameId, playerId, socket.id)
-    if (!result) return
-    const { winner, whiteSocketId, blackSocketId } = result
-    io.to(whiteSocketId).emit('game_over', { reason: 'timeout', winner })
-    io.to(blackSocketId).emit('game_over', { reason: 'timeout', winner })
-    console.log(`[TIMEOUT] ${gameId} winner=${winner}`)
-  })
+  // Clients may nudge the server when their display hits 0:00; the server
+  // checks its own clock, so a client can neither fake nor delay a timeout.
+  socket.on('timeout', () => runTimeoutSweep())
 
   // --- DISCONNECT ---
   socket.on('disconnect', () => {
@@ -184,8 +185,9 @@ io.on('connection', (socket) => {
       console.log(`[REJOIN FAILED] gameId=${gameId} playerId=${playerId}`)
       return
     }
-    socket.emit('rejoin_success', { fen: result.fen, color: result.color })
-    io.to(result.opponentSocketId).emit('opponent_reconnected')
+    const { opponentSocketId, wasDisconnected, ...state } = result
+    socket.emit('rejoin_success', state)
+    if (wasDisconnected) io.to(opponentSocketId).emit('opponent_reconnected')
     console.log(`[REJOIN] gameId=${gameId} color=${result.color}`)
   })
 })

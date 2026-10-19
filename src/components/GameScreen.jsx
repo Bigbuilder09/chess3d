@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom'
 import * as THREE from 'three'
 import { initScene, renderScene, disposeScene, getScene, getCamera, markDirty, shouldRender, setSceneBg } from '../three/ChessScene.js'
 import { createBoard, squareToWorld, worldToSquare, highlightSquare, clearAllHighlights, showLegalDots, clearLegalDots, getBoardGroup, updateBoardStyle, setBoardModel } from '../three/BoardMesh.js'
-import { createPiece, movePiece, removePiece, selectPiece, deselectPiece, rebuildPieces, buildPiecesFromBoard, clearAllPieces, preloadModels, preloadHiModels, preloadVicModels, preloadVic2Models, preloadChineseModels, preloadChinesePModels, preloadJapanModels, preloadFiberModels, preloadFiber2Models, preloadNeoPunkModels, updateRGBPieces, clearRGBRegistry } from '../three/PieceMesh.js'
+import { createPiece, movePiece, removePiece, selectPiece, deselectPiece, rebuildPieces, buildPiecesFromBoard, clearAllPieces, preloadStyle, updateRGBPieces, clearRGBRegistry } from '../three/PieceMesh.js'
 import { gsap } from 'gsap'
 import { initControls, updateControls, disposeControls, flipCamera } from '../three/CameraController.js'
 import { playCaptureEffect, playCheckEffect, clearCheckEffect, playCheckmateEffect } from '../three/CaptureEffect.js'
@@ -19,39 +19,6 @@ import CheckBanner from './CheckBanner.jsx'
 const PIECE_VALUES = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 }
 const INITIAL_TIME = 10 * 60 * 1000 // 10 min in ms
 
-// Map FEN board state to Three.js pieces
-function initBoardPieces(scene, style = 'classic') {
-  const pieceMap = {} // square → Group
-  const startLayout = [
-    // Black back rank
-    ['r','n','b','q','k','b','n','r'].map((t, i) => ({
-      type: t, color: 'black',
-      sq: String.fromCharCode(97 + i) + '8'
-    })),
-    // Black pawns
-    Array.from({ length: 8 }, (_, i) => ({
-      type: 'p', color: 'black',
-      sq: String.fromCharCode(97 + i) + '7'
-    })),
-    // White pawns
-    Array.from({ length: 8 }, (_, i) => ({
-      type: 'p', color: 'white',
-      sq: String.fromCharCode(97 + i) + '2'
-    })),
-    // White back rank
-    ['r','n','b','q','k','b','n','r'].map((t, i) => ({
-      type: t, color: 'white',
-      sq: String.fromCharCode(97 + i) + '1'
-    })),
-  ].flat()
-
-  startLayout.forEach(({ type, color, sq }) => {
-    const piece = createPiece(type, color, sq, scene, style)
-    if (piece) pieceMap[sq] = piece
-  })
-  return pieceMap
-}
-
 export default function GameScreen({ setGameResult, playerInfo, settings, setSettings }) {
   const navigate = useNavigate()
   const canvasRef    = useRef(null)
@@ -64,6 +31,13 @@ export default function GameScreen({ setGameResult, playerInfo, settings, setSet
   const mouse        = useRef(new THREE.Vector2())
   const isAnimating  = useRef(false)
   const lastMoveRef  = useRef(null)
+  // #1/#2: true once the 3D board + pieces exist. Socket events that arrive
+  // earlier only update the chess state; init() then builds from that state.
+  const sceneReadyRef = useRef(false)
+  const gameOverRef   = useRef(false)
+  // #5: server-authoritative clock snapshot, interpolated locally
+  const clockRef      = useRef({ white: INITIAL_TIME, black: INITIAL_TIME, turn: 'white', syncedAt: Date.now() })
+  const timeoutNudgedRef = useRef(false)
   // Keep a ref to latest settings so async callbacks always see current values
   const settingsRef  = useRef(settings)
 
@@ -101,7 +75,7 @@ export default function GameScreen({ setGameResult, playerInfo, settings, setSet
     selectSquare,
     clearSelection,
     getBoardState,
-    loadFen
+    loadState
   } = useChessGame(myColor)
 
   const [myTimeMs,  setMyTimeMs]  = useState(INITIAL_TIME)
@@ -113,6 +87,7 @@ export default function GameScreen({ setGameResult, playerInfo, settings, setSet
   const [isBoardFlipped, setIsBoardFlipped] = useState(myColor === 'black')
   const [promotionPending, setPromotionPending] = useState(null) // { from, to }
   const [opponentReconnecting, setOpponentReconnecting] = useState(false)
+  const [exitConfirm, setExitConfirm] = useState(false)
 
   const isMyTurn = currentTurn === myColor
 
@@ -125,6 +100,7 @@ export default function GameScreen({ setGameResult, playerInfo, settings, setSet
     if (!canvas) return
 
     let loopActive = true
+    let cancelled = false
 
     const onVisibilityChange = () => {
       if (document.hidden) {
@@ -149,17 +125,21 @@ export default function GameScreen({ setGameResult, playerInfo, settings, setSet
       sceneRef.current  = scene
       cameraRef.current = camera
 
-      try {
-        await preloadModels()
-      } catch (err) {
-        console.warn('GLB models failed to load, falling back to classic pieces:', err)
-      }
+      // #9: load the models of the chosen style (not only the base GLB set),
+      // otherwise styles like Vic / Chinese / Neo Punk fall back to classic
+      await preloadStyle(settingsRef.current.pieceStyle)
+      if (cancelled) return  // left the screen while models were loading
 
-      createBoard(scene, settings.boardStyle)
-      setBoardModel(settings.boardModel ?? null)
-      pieceMapRef.current = initBoardPieces(scene, settings.pieceStyle)
+      const s = settingsRef.current
+      createBoard(scene, s.boardStyle)
+      setBoardModel(s.boardModel ?? null)
+      // #1/#2: build from the *current* position — moves or a rejoin may have
+      // arrived while the models were loading
+      pieceMapRef.current = buildPiecesFromBoard(scene, chess.current.board(), s.pieceStyle)
       controlsRef.current = initControls(camera, { domElement: canvas })
-      setSceneBg(settings.bgImage ?? null)
+      setSceneBg(s.bgImage ?? null)
+      sceneReadyRef.current = true
+      markDirty(4)
 
       // Flip camera for black player
       if (myColor === 'black') {
@@ -171,6 +151,8 @@ export default function GameScreen({ setGameResult, playerInfo, settings, setSet
     init()
 
     return () => {
+      cancelled = true
+      sceneReadyRef.current = false
       loopActive = false
       gsap.ticker.remove(tick)
       document.removeEventListener('visibilitychange', onVisibilityChange)
@@ -182,81 +164,22 @@ export default function GameScreen({ setGameResult, playerInfo, settings, setSet
 
   // ─── Live board style update ─────────────────────────────────────────────────
   useEffect(() => {
-    if (!sceneRef.current) return
+    if (!sceneReadyRef.current) return  // init() applies the latest style itself
     updateBoardStyle(sceneRef.current, settings.boardStyle)
     markDirty()
   }, [settings.boardStyle])
 
   // ─── Live piece style update ─────────────────────────────────────────────────
   useEffect(() => {
-    if (!sceneRef.current) return
-    if (settings.pieceStyle === 'ok') {
-      preloadHiModels()
-        .then(() => {
-          if (sceneRef.current) rebuildPieces(sceneRef.current, pieceMapRef.current, 'ok')
-          markDirty()
-        })
-        .catch(err => console.warn('Hi model preload failed:', err))
-    } else if (settings.pieceStyle === 'vic') {
-      preloadVicModels()
-        .then(() => {
-          if (sceneRef.current) rebuildPieces(sceneRef.current, pieceMapRef.current, 'vic')
-          markDirty()
-        })
-        .catch(err => console.warn('Vic model preload failed:', err))
-    } else if (settings.pieceStyle === 'chinese') {
-      preloadChineseModels()
-        .then(() => {
-          if (sceneRef.current) rebuildPieces(sceneRef.current, pieceMapRef.current, 'chinese')
-          markDirty()
-        })
-        .catch(err => console.warn('Chinese model preload failed:', err))
-    } else if (settings.pieceStyle === 'chinese_p') {
-      preloadChinesePModels()
-        .then(() => {
-          if (sceneRef.current) rebuildPieces(sceneRef.current, pieceMapRef.current, 'chinese_p')
-          markDirty()
-        })
-        .catch(err => console.warn('Chinese Perfect model preload failed:', err))
-    } else if (settings.pieceStyle === 'japan') {
-      preloadJapanModels()
-        .then(() => {
-          if (sceneRef.current) rebuildPieces(sceneRef.current, pieceMapRef.current, 'japan')
-          markDirty()
-        })
-        .catch(err => console.warn('Japan model preload failed:', err))
-    } else if (settings.pieceStyle === 'vic2') {
-      preloadVic2Models()
-        .then(() => {
-          if (sceneRef.current) rebuildPieces(sceneRef.current, pieceMapRef.current, 'vic2')
-          markDirty()
-        })
-        .catch(err => console.warn('Vic2 model preload failed:', err))
-    } else if (settings.pieceStyle === 'fiber') {
-      preloadFiberModels()
-        .then(() => {
-          if (sceneRef.current) rebuildPieces(sceneRef.current, pieceMapRef.current, 'fiber')
-          markDirty()
-        })
-        .catch(err => console.warn('Fiber model preload failed:', err))
-    } else if (settings.pieceStyle === 'fiber2') {
-      preloadFiber2Models()
-        .then(() => {
-          if (sceneRef.current) rebuildPieces(sceneRef.current, pieceMapRef.current, 'fiber2')
-          markDirty()
-        })
-        .catch(err => console.warn('Fiber2 model preload failed:', err))
-    } else if (settings.pieceStyle === 'neo_punk') {
-      preloadNeoPunkModels()
-        .then(() => {
-          if (sceneRef.current) rebuildPieces(sceneRef.current, pieceMapRef.current, 'neo_punk')
-          markDirty()
-        })
-        .catch(err => console.warn('Neo Punk model preload failed:', err))
-    } else {
-      rebuildPieces(sceneRef.current, pieceMapRef.current, settings.pieceStyle)
+    const style = settings.pieceStyle
+    // Before init() finishes there is nothing to rebuild; init() reads the
+    // latest style from settingsRef itself.
+    if (!sceneReadyRef.current) return
+    preloadStyle(style).then(() => {
+      if (!sceneReadyRef.current || settingsRef.current.pieceStyle !== style) return
+      rebuildPieces(sceneRef.current, pieceMapRef.current, style)
       markDirty()
-    }
+    })
   }, [settings.pieceStyle])
 
   // ─── Live board model update ──────────────────────────────────────────────────
@@ -276,7 +199,20 @@ export default function GameScreen({ setGameResult, playerInfo, settings, setSet
       lastMoveRef.current = { from, to }
 
       applyServerMove(data)
-      setCurrentTurn(prev => prev === 'white' ? 'black' : 'white')
+      // Derive the turn from the authoritative FEN instead of toggling
+      const turnAfter = data.fen.split(' ')[1] === 'w' ? 'white' : 'black'
+      setCurrentTurn(turnAfter)
+      // #5: re-sync the clock with the server
+      if (data.clocks) {
+        clockRef.current = { white: data.clocks.white, black: data.clocks.black, turn: turnAfter, syncedAt: Date.now() }
+        timeoutNudgedRef.current = false
+      }
+      // #8: a pending draw offer lapses once a move is made (server clears it too)
+      setDrawOffered(false)
+      setMyDrawOfferSent(false)
+
+      // #2: board not built yet — init() will build it from the updated state
+      if (!sceneReadyRef.current) return
 
       const scene    = sceneRef.current
       const camera   = cameraRef.current
@@ -406,10 +342,6 @@ export default function GameScreen({ setGameResult, playerInfo, settings, setSet
       setDrawOffered(true)
     })
 
-    const off4 = on('draw_accepted', () => {
-      handleGameOverRef.current({ reason: 'draw', winner: null })
-    })
-
     const off5 = on('draw_declined', () => {
       setDrawOffered(false)
       setMyDrawOfferSent(false)
@@ -425,23 +357,36 @@ export default function GameScreen({ setGameResult, playerInfo, settings, setSet
       setOpponentReconnecting(false)
     })
 
-    const offRejoin = on('rejoin_success', ({ fen }) => {
+    const offRejoin = on('rejoin_success', ({ fen, history, clocks, drawOffer }) => {
+      // #1: always restore the game state first — even if the 3D scene is
+      // still loading (init() will then build the pieces from this state)
+      loadState({ fen, history })
       const activeColor = fen.split(' ')[1] === 'w' ? 'white' : 'black'
       setCurrentTurn(activeColor)
+      if (clocks) {
+        clockRef.current = { white: clocks.white, black: clocks.black, turn: activeColor, syncedAt: Date.now() }
+        timeoutNudgedRef.current = false
+      }
+      setDrawOffered(drawOffer === 'received')
+      setMyDrawOfferSent(drawOffer === 'sent')
+      setOpponentReconnecting(false)
+
+      if (!sceneReadyRef.current) return
       const scene = sceneRef.current
       const map = pieceMapRef.current
-      if (!scene || !map) return
-      loadFen(fen)
       clearAllPieces(scene, map)
-      const board = chess.current.board()
-      const newMap = buildPiecesFromBoard(scene, board, settingsRef.current.pieceStyle)
+      const newMap = buildPiecesFromBoard(scene, chess.current.board(), settingsRef.current.pieceStyle)
       Object.assign(pieceMapRef.current, newMap)
+      clearCheckEffect(scene)
       clearAllHighlights()
       clearLegalDots()
       markDirty(4)
     })
 
     const offRejoinFailed = on('rejoin_failed', () => {
+      // The game no longer exists on the server (it ended while we were away)
+      gameOverRef.current = true
+      sessionStorage.removeItem('game_data')
       navigate('/')
     })
 
@@ -450,10 +395,10 @@ export default function GameScreen({ setGameResult, playerInfo, settings, setSet
     })
 
     return () => {
-      off1?.(); off2?.(); off3?.(); off4?.(); off5?.(); off6?.(); off7?.(); offDrawSent?.()
+      off1?.(); off2?.(); off3?.(); off5?.(); off6?.(); off7?.(); offDrawSent?.()
       offReconnected?.(); offRejoin?.(); offRejoinFailed?.()
     }
-  }, [on, applyServerMove, myColor]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [on, applyServerMove, loadState, myColor]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─── Find king square (from pieceMap) ────────────────────────────────────────
   function findKingSquare(color) {
@@ -467,6 +412,9 @@ export default function GameScreen({ setGameResult, playerInfo, settings, setSet
 
   // ─── Game over ───────────────────────────────────────────────────────────────
   const handleGameOver = useCallback((go) => {
+    // #7: run once, even if several end-of-game events arrive
+    if (gameOverRef.current) return
+    gameOverRef.current = true
     setGameOver(go)
     setMyDrawOfferSent(false)
     setDrawOffered(false)
@@ -488,7 +436,7 @@ export default function GameScreen({ setGameResult, playerInfo, settings, setSet
       outcome,
       reason: go.reason,
       stats: {
-        moves: moves.length * 2,
+        moves: moves.reduce((n, m) => n + (m.white ? 1 : 0) + (m.black ? 1 : 0), 0),
       }
     })
 
@@ -500,7 +448,7 @@ export default function GameScreen({ setGameResult, playerInfo, settings, setSet
   // ─── Raycasting / click handling ─────────────────────────────────────────────
   const handleCanvasClick = useCallback((e) => {
     if (!isMyTurn || isAnimating.current) return
-    if (gameOver) return
+    if (gameOver || !sceneReadyRef.current) return
 
     const canvas = canvasRef.current
     const camera = cameraRef.current
@@ -647,29 +595,30 @@ export default function GameScreen({ setGameResult, playerInfo, settings, setSet
   }
 
   // ─── Chess clock ─────────────────────────────────────────────────────────────
+  // #5: the server owns the clock and sends both clocks with every move. Here
+  // we only interpolate for display, using real elapsed time (Date.now) so a
+  // throttled background tab can't slow the clock down. When the side to move
+  // reaches 0 we nudge the server, which checks its own clock and ends the game.
   useEffect(() => {
-    if (timerRef.current) clearInterval(timerRef.current)
     if (gameOver) return
-
-    if (isMyTurn) {
-      timerRef.current = setInterval(() => {
-        setMyTimeMs(prev => {
-          const next = Math.max(0, prev - 100)
-          if (next <= 0) {
-            clearInterval(timerRef.current)
-            emit('timeout', { gameId, playerId })
-          }
-          return next
-        })
-      }, 100)
-    } else {
-      timerRef.current = setInterval(() => {
-        setOppTimeMs(prev => Math.max(0, prev - 100))
-      }, 100)
+    const oppColor = myColor === 'white' ? 'black' : 'white'
+    const tick = () => {
+      const c = clockRef.current
+      const elapsed = Math.max(0, Date.now() - c.syncedAt)
+      const value = (side) => Math.max(0, c[side] - (c.turn === side ? elapsed : 0))
+      const mine = value(myColor)
+      const theirs = value(oppColor)
+      setMyTimeMs(mine)
+      setOppTimeMs(theirs)
+      if (value(c.turn) <= 0 && !timeoutNudgedRef.current) {
+        timeoutNudgedRef.current = true
+        emit('timeout', { gameId, playerId })
+      }
     }
-
+    tick()
+    timerRef.current = setInterval(tick, 200)
     return () => clearInterval(timerRef.current)
-  }, [isMyTurn, gameOver]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [gameOver]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─── Resign / Draw ───────────────────────────────────────────────────────────
   const handleResign = () => {
@@ -690,6 +639,33 @@ export default function GameScreen({ setGameResult, playerInfo, settings, setSet
     emit('decline_draw', { gameId, playerId })
     setDrawOffered(false)
   }
+
+  // #3: leaving an unfinished game counts as resigning, so the opponent isn't
+  // left waiting forever and the server doesn't keep us in an active game.
+  const leaveGame = useCallback(() => {
+    if (!gameOverRef.current) {
+      gameOverRef.current = true
+      emit('resign', { gameId, playerId })
+    }
+    sessionStorage.removeItem('game_data')
+    navigate('/')
+  }, [emit, gameId, playerId, navigate])
+
+  const handleExitClick = () => {
+    if (gameOverRef.current) navigate('/')
+    else setExitConfirm(true)
+  }
+
+  // Leaving through the browser's Back button (in-app navigation) resigns too.
+  // A page refresh does not run this cleanup, so refresh → rejoin still works.
+  useEffect(() => {
+    return () => {
+      if (!gameOverRef.current) {
+        emit('resign', { gameId, playerId })
+        sessionStorage.removeItem('game_data')
+      }
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─── Panel props ─────────────────────────────────────────────────────────────
   const myPanelProps = {
@@ -876,12 +852,30 @@ export default function GameScreen({ setGameResult, playerInfo, settings, setSet
               </div>
             )}
           </div>
-          <button
-            onClick={() => navigate('/')}
-            className="text-ash hover:text-ivory font-inter text-xs transition-colors"
-          >
-            ✕ Exit
-          </button>
+          {exitConfirm ? (
+            <div className="flex items-center gap-2">
+              <span className="text-crimson font-inter text-xs hidden sm:inline">Leave = resign?</span>
+              <button
+                onClick={leaveGame}
+                className="px-2 py-1 rounded text-xs font-inter bg-crimson text-ivory hover:brightness-110 transition-all"
+              >
+                Leave
+              </button>
+              <button
+                onClick={() => setExitConfirm(false)}
+                className="px-2 py-1 rounded text-xs font-inter border border-carbon text-ash hover:text-ivory transition-colors"
+              >
+                Stay
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={handleExitClick}
+              className="text-ash hover:text-ivory font-inter text-xs transition-colors"
+            >
+              ✕ Exit
+            </button>
+          )}
         </div>
       </div>
 

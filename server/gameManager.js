@@ -1,24 +1,111 @@
 import { Chess } from 'chess.js'
 import { v4 as uuidv4 } from 'uuid'
 
+export const INITIAL_TIME_MS = 10 * 60 * 1000   // 10 minutes per side
+export const START_DELAY_MS = 3000              // matches the "Starting in 3…" countdown
+
 const matchmakingQueue = []
 const activeGames = {}
 const disconnectTimers = new Map()  // gameId → { white?: timeoutId, black?: timeoutId }
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function sideOf(game, playerId) {
+  if (game.white.playerId === playerId) return 'white'
+  if (game.black.playerId === playerId) return 'black'
+  return null
+}
+
+/** Side that playerId owns *and* is currently connected with socketId (C3). */
+function authSide(game, playerId, socketId) {
+  const side = sideOf(game, playerId)
+  if (!side) return null
+  return game[side].socketId === socketId ? side : null
+}
+
+function turnSide(game) {
+  return game.chess.turn() === 'w' ? 'white' : 'black'
+}
+
+/**
+ * Current clock values (ms). The side to move has the time elapsed since its
+ * turn started subtracted. Clocks don't run before the start countdown ends.
+ */
+export function getClocks(game, now = Date.now()) {
+  const clocks = { white: game.clock.white, black: game.clock.black }
+  const elapsed = Math.max(0, now - game.clock.turnStartedAt)
+  const side = turnSide(game)
+  clocks[side] = Math.max(0, clocks[side] - elapsed)
+  return clocks
+}
+
+/** Remove the game and every pending disconnect timer that belongs to it. */
+function endGame(gameId) {
+  delete activeGames[gameId]
+  const timers = disconnectTimers.get(gameId)
+  if (timers) {
+    for (const tid of Object.values(timers)) clearTimeout(tid)
+    disconnectTimers.delete(gameId)
+  }
+}
+
+function pickColors(a, b) {
+  if (a.preferredColor === 'white' && b.preferredColor !== 'white') return [a, b]
+  if (a.preferredColor === 'black' && b.preferredColor !== 'black') return [b, a]
+  if (b.preferredColor === 'white' && a.preferredColor !== 'white') return [b, a]
+  if (b.preferredColor === 'black' && a.preferredColor !== 'black') return [a, b]
+  return Math.random() < 0.5 ? [a, b] : [b, a]
+}
+
+function createGame(a, b) {
+  const [whitePlayer, blackPlayer] = pickColors(a, b)
+  const gameId = uuidv4()
+  const game = {
+    gameId,
+    chess: new Chess(),
+    white: { playerId: whitePlayer.playerId, socketId: whitePlayer.socketId, name: whitePlayer.name, rating: whitePlayer.rating },
+    black: { playerId: blackPlayer.playerId, socketId: blackPlayer.socketId, name: blackPlayer.name, rating: blackPlayer.rating },
+    drawOfferedBy: null,
+    createdAt: Date.now(),
+    clock: {
+      white: INITIAL_TIME_MS,
+      black: INITIAL_TIME_MS,
+      // White's clock starts when the client countdown finishes
+      turnStartedAt: Date.now() + START_DELAY_MS
+    }
+  }
+  activeGames[gameId] = game
+  return { gameId, white: game.white, black: game.black }
+}
+
+// ─── Matchmaking ──────────────────────────────────────────────────────────────
+
+/**
+ * #3: Forfeit every active game the player is still in (e.g. they left the
+ * game screen and are now queueing again). Returns results to broadcast.
+ */
+export function abandonGames(playerId) {
+  const results = []
+  for (const [gameId, game] of Object.entries(activeGames)) {
+    const side = sideOf(game, playerId)
+    if (!side) continue
+    results.push({
+      gameId,
+      winner: side === 'white' ? 'black' : 'white',
+      reason: 'resignation',
+      whiteSocketId: game.white.socketId,
+      blackSocketId: game.black.socketId
+    })
+    endGame(gameId)
+  }
+  return results
+}
 
 /**
  * Add a player to the matchmaking queue.
  * Returns a match object if a suitable opponent was found, otherwise null.
  */
 export function joinQueue(playerId, rating, name, socketId, preferredColor) {
-  // M7: Reject if the player is already in an active game
-  const alreadyInGame = Object.values(activeGames).some(
-    g => g.white.playerId === playerId || g.black.playerId === playerId
-  )
-  if (alreadyInGame) {
-    console.log(`[QUEUE REJECTED] ${name} (${playerId}) already in active game`)
-    return false
-  }
-
   // Remove any existing entry for this player
   const existingIdx = matchmakingQueue.findIndex(p => p.playerId === playerId)
   if (existingIdx !== -1) matchmakingQueue.splice(existingIdx, 1)
@@ -30,9 +117,6 @@ export function joinQueue(playerId, rating, name, socketId, preferredColor) {
   return tryMatch(playerId, rating, joinedAt)
 }
 
-/**
- * Remove a player from the matchmaking queue.
- */
 export function leaveQueue(playerId) {
   const idx = matchmakingQueue.findIndex(p => p.playerId === playerId)
   if (idx !== -1) matchmakingQueue.splice(idx, 1)
@@ -43,8 +127,7 @@ export function leaveQueue(playerId) {
  * Rating tolerance expands by +50 every 30 seconds.
  */
 function tryMatch(playerId, rating, joinedAt) {
-  const now = Date.now()
-  const waitSeconds = (now - joinedAt) / 1000
+  const waitSeconds = (Date.now() - joinedAt) / 1000
   const tolerance = 150 + Math.floor(waitSeconds / 30) * 50
 
   const myIdx = matchmakingQueue.findIndex(p => p.playerId === playerId)
@@ -54,53 +137,21 @@ function tryMatch(playerId, rating, joinedAt) {
     if (i === myIdx) continue
     const candidate = matchmakingQueue[i]
     if (Math.abs(candidate.rating - rating) <= tolerance) {
-      // Found a match — remove both from queue
       const me = matchmakingQueue[myIdx]
       matchmakingQueue.splice(Math.max(myIdx, i), 1)
       matchmakingQueue.splice(Math.min(myIdx, i), 1)
-
-      const gameId = uuidv4()
-      let whitePlayer, blackPlayer
-      if (me.preferredColor === 'white' && candidate.preferredColor !== 'white') {
-        whitePlayer = me; blackPlayer = candidate
-      } else if (me.preferredColor === 'black' && candidate.preferredColor !== 'black') {
-        whitePlayer = candidate; blackPlayer = me
-      } else if (candidate.preferredColor === 'white' && me.preferredColor !== 'white') {
-        whitePlayer = candidate; blackPlayer = me
-      } else if (candidate.preferredColor === 'black' && me.preferredColor !== 'black') {
-        whitePlayer = me; blackPlayer = candidate
-      } else {
-        whitePlayer = Math.random() < 0.5 ? me : candidate
-        blackPlayer = whitePlayer === me ? candidate : me
-      }
-
-      const game = {
-        gameId,
-        chess: new Chess(),
-        white: { playerId: whitePlayer.playerId, socketId: whitePlayer.socketId, name: whitePlayer.name, rating: whitePlayer.rating },
-        black: { playerId: blackPlayer.playerId, socketId: blackPlayer.socketId, name: blackPlayer.name, rating: blackPlayer.rating },
-        drawOfferedBy: null,
-        createdAt: Date.now()
-      }
-
-      activeGames[gameId] = game
-
-      return {
-        gameId,
-        white: game.white,
-        black: game.black
-      }
+      return createGame(me, candidate)
     }
   }
-
   return null
 }
 
 /**
  * Periodically scan queue for matches with expanded tolerance.
- * Call this from a setInterval in the server.
+ * Returns the list of new matches; the caller notifies the players.
  */
-export function scanQueue(io) {
+export function scanQueue() {
+  const matches = []
   const now = Date.now()
   for (let i = 0; i < matchmakingQueue.length; i++) {
     const player = matchmakingQueue[i]
@@ -113,56 +164,15 @@ export function scanQueue(io) {
         matchmakingQueue.splice(j, 1)
         matchmakingQueue.splice(i, 1)
         i--
-
-        const gameId = uuidv4()
-        let whitePlayer, blackPlayer
-        if (player.preferredColor === 'white' && candidate.preferredColor !== 'white') {
-          whitePlayer = player; blackPlayer = candidate
-        } else if (player.preferredColor === 'black' && candidate.preferredColor !== 'black') {
-          whitePlayer = candidate; blackPlayer = player
-        } else if (candidate.preferredColor === 'white' && player.preferredColor !== 'white') {
-          whitePlayer = candidate; blackPlayer = player
-        } else if (candidate.preferredColor === 'black' && player.preferredColor !== 'black') {
-          whitePlayer = player; blackPlayer = candidate
-        } else {
-          whitePlayer = Math.random() < 0.5 ? player : candidate
-          blackPlayer = whitePlayer === player ? candidate : player
-        }
-
-        const game = {
-          gameId,
-          chess: new Chess(),
-          white: { playerId: whitePlayer.playerId, socketId: whitePlayer.socketId, name: whitePlayer.name, rating: whitePlayer.rating },
-          black: { playerId: blackPlayer.playerId, socketId: blackPlayer.socketId, name: blackPlayer.name, rating: blackPlayer.rating },
-          drawOfferedBy: null,
-          createdAt: Date.now()
-        }
-
-        activeGames[gameId] = game
-
-        const matchData = { gameId, white: game.white, black: game.black }
-
-        io.to(whitePlayer.socketId).emit('match_found', {
-          opponent: { name: blackPlayer.name, rating: blackPlayer.rating },
-          color: 'white',
-          gameId
-        })
-        io.to(blackPlayer.socketId).emit('match_found', {
-          opponent: { name: whitePlayer.name, rating: whitePlayer.rating },
-          color: 'black',
-          gameId
-        })
-
-        setTimeout(() => {
-          io.to(whitePlayer.socketId).emit('game_start', { color: 'white', gameId })
-          io.to(blackPlayer.socketId).emit('game_start', { color: 'black', gameId })
-        }, 3000)
-
+        matches.push(createGame(player, candidate))
         break
       }
     }
   }
+  return matches
 }
+
+// ─── Moves ────────────────────────────────────────────────────────────────────
 
 /**
  * Process a move. Returns { success, data, error }.
@@ -171,61 +181,94 @@ export function processMove(gameId, playerId, socketId, from, to, promotion) {
   const game = activeGames[gameId]
   if (!game) return { success: false, error: 'Game not found' }
 
-  const chess = game.chess
-  const turn = chess.turn() // 'w' or 'b'
+  const side = authSide(game, playerId, socketId)
+  if (!side) return { success: false, error: 'Unauthorized' }
+  if (turnSide(game) !== side) return { success: false, error: 'Not your turn' }
 
-  // C3: Verify both playerId AND socketId own the slot
-  const isWhite = game.white.playerId === playerId && game.white.socketId === socketId
-  const isBlack = game.black.playerId === playerId && game.black.socketId === socketId
-
-  if (!isWhite && !isBlack) return { success: false, error: 'Unauthorized' }
-  if (turn === 'w' && !isWhite) return { success: false, error: 'Not your turn' }
-  if (turn === 'b' && !isBlack) return { success: false, error: 'Not your turn' }
+  const now = Date.now()
+  const clocks = getClocks(game, now)
+  if (clocks[side] <= 0) {
+    // Flagged before the move arrived — the sweeper will end the game
+    return { success: false, error: 'Out of time' }
+  }
 
   let moveResult
   try {
-    moveResult = chess.move({ from, to, promotion: promotion || 'q' })
+    moveResult = game.chess.move({ from, to, promotion: promotion || 'q' })
   } catch (e) {
     return { success: false, error: 'Invalid move' }
   }
-
   if (!moveResult) return { success: false, error: 'Invalid move' }
 
-  const captured = moveResult.captured || null
+  // #5: commit the mover's clock and start the opponent's
+  game.clock.white = clocks.white
+  game.clock.black = clocks.black
+  game.clock.turnStartedAt = now
+  // #8: a pending draw offer lapses once a move is made
+  game.drawOfferedBy = null
+
+  const chess = game.chess
   const isCheck = chess.isCheck()
   const isCheckmate = chess.isCheckmate()
-  const isDraw = chess.isDraw()
   const isStalemate = chess.isStalemate()
+  const isDraw = chess.isDraw() // includes stalemate in chess.js v1
 
   let gameOver = null
   if (isCheckmate) {
-    const winner = turn === 'w' ? 'white' : 'black'
-    gameOver = { reason: 'checkmate', winner }
-    delete activeGames[gameId]
-  } else if (isDraw || isStalemate) {
-    gameOver = { reason: isDraw ? 'draw' : 'stalemate', winner: null }
-    delete activeGames[gameId]
+    gameOver = { reason: 'checkmate', winner: side }
+  } else if (isStalemate) {
+    gameOver = { reason: 'stalemate', winner: null }
+  } else if (isDraw) {
+    gameOver = { reason: 'draw', winner: null }
   }
 
-  return {
+  const result = {
     success: true,
     data: {
       from,
       to,
       san: moveResult.san,
       fen: chess.fen(),
-      captured,
+      captured: moveResult.captured || null,
       flags: moveResult.flags,
       promotion: moveResult.promotion || null,
       isCheck,
       isCheckmate,
-      isDraw: isDraw || isStalemate,
+      isDraw,
+      clocks: { white: game.clock.white, black: game.clock.black },
       gameOver
     },
     whiteSocketId: game.white.socketId,
     blackSocketId: game.black.socketId
   }
+
+  if (gameOver) endGame(gameId)
+  return result
 }
+
+// ─── Clock ────────────────────────────────────────────────────────────────────
+
+/**
+ * #5: End every game whose side-to-move has run out of time.
+ * Called periodically by the server. Returns results to broadcast.
+ */
+export function sweepTimeouts(now = Date.now()) {
+  const results = []
+  for (const [gameId, game] of Object.entries(activeGames)) {
+    const side = turnSide(game)
+    if (getClocks(game, now)[side] > 0) continue
+    results.push({
+      gameId,
+      winner: side === 'white' ? 'black' : 'white',
+      whiteSocketId: game.white.socketId,
+      blackSocketId: game.black.socketId
+    })
+    endGame(gameId)
+  }
+  return results
+}
+
+// ─── Disconnect / rejoin ──────────────────────────────────────────────────────
 
 /**
  * Handle player disconnect from a game.
@@ -247,20 +290,15 @@ export function handleDisconnect(socketId, onExpire) {
     game[side].disconnected = true
 
     const timerId = setTimeout(() => {
-      if (activeGames[gameId]) {
-        const liveGame = activeGames[gameId]
-        const oppSocket = isWhite ? liveGame.black.socketId : liveGame.white.socketId
-        delete activeGames[gameId]
-        const gameTimers = disconnectTimers.get(gameId)
-        if (gameTimers) {
-          for (const tid of Object.values(gameTimers)) clearTimeout(tid)
-          disconnectTimers.delete(gameId)
-        }
-        onExpire(gameId, winner, oppSocket)
-      }
+      const liveGame = activeGames[gameId]
+      if (!liveGame || !liveGame[side].disconnected) return
+      const oppSocket = isWhite ? liveGame.black.socketId : liveGame.white.socketId
+      endGame(gameId)
+      onExpire(gameId, winner, oppSocket)
     }, 30000)
 
     const existing = disconnectTimers.get(gameId) || {}
+    if (existing[side]) clearTimeout(existing[side])
     existing[side] = timerId
     disconnectTimers.set(gameId, existing)
     return { opponentSocketId, gameId }
@@ -269,19 +307,21 @@ export function handleDisconnect(socketId, onExpire) {
 }
 
 /**
- * Attempt to rejoin an active game after reconnection.
- * Returns { fen, color, opponentSocketId } on success, or null.
+ * Attempt to rejoin an active game after reconnection / page refresh.
+ *
+ * #4: Does NOT require the server to have noticed the old socket's disconnect
+ * yet — a client can reconnect before the server's ping timeout fires. Once
+ * the slot points at the new socket, the late disconnect of the old socket no
+ * longer matches anything and is ignored.
  */
 export function rejoinGame(gameId, playerId, newSocketId) {
   const game = activeGames[gameId]
   if (!game) return null
 
-  const isWhite = game.white.playerId === playerId
-  const isBlack = game.black.playerId === playerId
-  if (!isWhite && !isBlack) return null
+  const side = sideOf(game, playerId)
+  if (!side) return null
 
-  const side = isWhite ? 'white' : 'black'
-  if (!game[side].disconnected) return null
+  const wasDisconnected = !!game[side].disconnected
 
   const gameTimers = disconnectTimers.get(gameId)
   if (gameTimers?.[side]) {
@@ -293,9 +333,23 @@ export function rejoinGame(gameId, playerId, newSocketId) {
   game[side].socketId = newSocketId
   game[side].disconnected = false
 
-  const opponentSocketId = isWhite ? game.black.socketId : game.white.socketId
-  return { fen: game.chess.fen(), color: side, opponentSocketId }
+  const oppSide = side === 'white' ? 'black' : 'white'
+  return {
+    fen: game.chess.fen(),
+    color: side,
+    history: game.chess.history({ verbose: true }).map(m => ({
+      san: m.san, captured: m.captured || null, color: m.color
+    })),
+    clocks: getClocks(game),
+    drawOffer: game.drawOfferedBy === null
+      ? null
+      : game.drawOfferedBy === playerId ? 'sent' : 'received',
+    opponentSocketId: game[oppSide].socketId,
+    wasDisconnected
+  }
 }
+
+// ─── Draw / resign ────────────────────────────────────────────────────────────
 
 /**
  * Offer or accept a draw.
@@ -304,21 +358,34 @@ export function offerDraw(gameId, playerId, socketId) {
   const game = activeGames[gameId]
   if (!game) return null
 
-  // C3: Verify both playerId AND socketId own the slot
-  const isWhite = game.white.playerId === playerId && game.white.socketId === socketId
-  const isBlack = game.black.playerId === playerId && game.black.socketId === socketId
-  if (!isWhite && !isBlack) return null
+  const side = authSide(game, playerId, socketId)
+  if (!side) return null
 
   if (game.drawOfferedBy && game.drawOfferedBy !== playerId) {
-    // Accept draw
-    delete activeGames[gameId]
-    return { accepted: true, whiteSocketId: game.white.socketId, blackSocketId: game.black.socketId }
+    const result = { accepted: true, whiteSocketId: game.white.socketId, blackSocketId: game.black.socketId }
+    endGame(gameId)
+    return result
   }
 
   game.drawOfferedBy = playerId
-  const opponentSocketId =
-    game.white.playerId === playerId ? game.black.socketId : game.white.socketId
+  const opponentSocketId = side === 'white' ? game.black.socketId : game.white.socketId
   return { accepted: false, opponentSocketId }
+}
+
+/**
+ * Decline a pending draw offer. Returns the offerer's socket id, or null.
+ */
+export function declineDraw(gameId, playerId, socketId) {
+  const game = activeGames[gameId]
+  if (!game) return null
+
+  const side = authSide(game, playerId, socketId)
+  if (!side) return null
+  // Only meaningful if the *opponent* has an offer pending
+  if (!game.drawOfferedBy || game.drawOfferedBy === playerId) return null
+
+  game.drawOfferedBy = null
+  return side === 'white' ? game.black.socketId : game.white.socketId
 }
 
 /**
@@ -328,45 +395,19 @@ export function resignGame(gameId, playerId, socketId) {
   const game = activeGames[gameId]
   if (!game) return null
 
-  // C3: Verify both playerId AND socketId own the slot
-  const isWhite = game.white.playerId === playerId && game.white.socketId === socketId
-  const isBlack = game.black.playerId === playerId && game.black.socketId === socketId
-  if (!isWhite && !isBlack) return null
+  const side = authSide(game, playerId, socketId)
+  if (!side) return null
 
-  const winner = isWhite ? 'black' : 'white'
   const result = {
-    winner,
+    winner: side === 'white' ? 'black' : 'white',
     reason: 'resignation',
     whiteSocketId: game.white.socketId,
     blackSocketId: game.black.socketId
   }
-  delete activeGames[gameId]
+  endGame(gameId)
   return result
 }
 
 export function getGame(gameId) {
   return activeGames[gameId] || null
-}
-
-/**
- * Handle a timeout — the losing player ran out of time.
- * Returns { winner, whiteSocketId, blackSocketId } or null.
- */
-export function handleTimeout(gameId, losingPlayerId, socketId) {
-  const game = activeGames[gameId]
-  if (!game) return null
-
-  // C3: Verify both playerId AND socketId own the slot
-  const isWhite = game.white.playerId === losingPlayerId && game.white.socketId === socketId
-  const isBlack = game.black.playerId === losingPlayerId && game.black.socketId === socketId
-  if (!isWhite && !isBlack) return null
-
-  const winner = isWhite ? 'black' : 'white'
-  const result = {
-    winner,
-    whiteSocketId: game.white.socketId,
-    blackSocketId: game.black.socketId
-  }
-  delete activeGames[gameId]
-  return result
 }

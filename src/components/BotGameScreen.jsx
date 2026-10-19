@@ -4,7 +4,7 @@ import * as THREE from 'three'
 import { Chess } from 'chess.js'
 import { initScene, renderScene, disposeScene, markDirty, shouldRender, setSceneBg } from '../three/ChessScene.js'
 import { createBoard, highlightSquare, clearAllHighlights, showLegalDots, clearLegalDots, getBoardGroup, updateBoardStyle, setBoardModel, worldToSquare } from '../three/BoardMesh.js'
-import { createPiece, movePiece, removePiece, selectPiece, deselectPiece, rebuildPieces, preloadModels, preloadHiModels, preloadVicModels, preloadVic2Models, preloadChineseModels, preloadChinesePModels, preloadJapanModels, preloadFiberModels, preloadFiber2Models, preloadNeoPunkModels, updateRGBPieces, clearRGBRegistry } from '../three/PieceMesh.js'
+import { createPiece, movePiece, removePiece, selectPiece, deselectPiece, rebuildPieces, preloadStyle, updateRGBPieces, clearRGBRegistry } from '../three/PieceMesh.js'
 import { gsap } from 'gsap'
 import { initControls, updateControls, disposeControls } from '../three/CameraController.js'
 import { playCaptureEffect, playCheckEffect, clearCheckEffect, playCheckmateEffect } from '../three/CaptureEffect.js'
@@ -47,6 +47,7 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
   const mouse = useRef(new THREE.Vector2())
   const isAnimating = useRef(false)
   const botThinkingRef = useRef(false)
+  const sceneReadyRef = useRef(false)
   const localChessRef = useRef(new Chess())
   const lastMoveRef = useRef(null)
   const { getMove } = useStockfish()
@@ -83,6 +84,7 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
     if (!canvas) return
 
     let loopActive = true
+    let cancelled = false
 
     const onVisibilityChange = () => {
       if (document.hidden) {
@@ -107,22 +109,25 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
       sceneRef.current = scene
       cameraRef.current = camera
 
-      try {
-        await preloadModels()
-      } catch (err) {
-        console.warn('GLB models failed to load, falling back to classic pieces:', err)
-      }
+      // #9: load the chosen style's models before building the pieces
+      await preloadStyle(settingsRef.current.pieceStyle)
+      if (cancelled) return
 
-      createBoard(scene, settings.boardStyle)
-      setBoardModel(settings.boardModel ?? null)
-      pieceMapRef.current = initBoardPieces(scene, settings.pieceStyle)
+      const s = settingsRef.current
+      createBoard(scene, s.boardStyle)
+      setBoardModel(s.boardModel ?? null)
+      pieceMapRef.current = initBoardPieces(scene, s.pieceStyle)
       controlsRef.current = initControls(camera, { domElement: canvas })
-      setSceneBg(settings.bgImage ?? null)
+      setSceneBg(s.bgImage ?? null)
+      sceneReadyRef.current = true
+      markDirty(4)
     }
 
     init()
 
     return () => {
+      cancelled = true
+      sceneReadyRef.current = false
       loopActive = false
       gsap.ticker.remove(tick)
       document.removeEventListener('visibilitychange', onVisibilityChange)
@@ -134,81 +139,20 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
 
   // ── Live board style update ──────────────────────────────────────────────
   useEffect(() => {
-    if (!sceneRef.current) return
+    if (!sceneReadyRef.current) return
     updateBoardStyle(sceneRef.current, settings.boardStyle)
     markDirty()
   }, [settings.boardStyle])
 
   // ── Live piece style update ──────────────────────────────────────────────
   useEffect(() => {
-    if (!sceneRef.current) return
-    if (settings.pieceStyle === 'ok') {
-      preloadHiModels()
-        .then(() => {
-          if (sceneRef.current) rebuildPieces(sceneRef.current, pieceMapRef.current, 'ok')
-          markDirty()
-        })
-        .catch(err => console.warn('Hi model preload failed:', err))
-    } else if (settings.pieceStyle === 'vic') {
-      preloadVicModels()
-        .then(() => {
-          if (sceneRef.current) rebuildPieces(sceneRef.current, pieceMapRef.current, 'vic')
-          markDirty()
-        })
-        .catch(err => console.warn('Vic model preload failed:', err))
-    } else if (settings.pieceStyle === 'chinese') {
-      preloadChineseModels()
-        .then(() => {
-          if (sceneRef.current) rebuildPieces(sceneRef.current, pieceMapRef.current, 'chinese')
-          markDirty()
-        })
-        .catch(err => console.warn('Chinese model preload failed:', err))
-    } else if (settings.pieceStyle === 'chinese_p') {
-      preloadChinesePModels()
-        .then(() => {
-          if (sceneRef.current) rebuildPieces(sceneRef.current, pieceMapRef.current, 'chinese_p')
-          markDirty()
-        })
-        .catch(err => console.warn('Chinese Perfect model preload failed:', err))
-    } else if (settings.pieceStyle === 'japan') {
-      preloadJapanModels()
-        .then(() => {
-          if (sceneRef.current) rebuildPieces(sceneRef.current, pieceMapRef.current, 'japan')
-          markDirty()
-        })
-        .catch(err => console.warn('Japan model preload failed:', err))
-    } else if (settings.pieceStyle === 'vic2') {
-      preloadVic2Models()
-        .then(() => {
-          if (sceneRef.current) rebuildPieces(sceneRef.current, pieceMapRef.current, 'vic2')
-          markDirty()
-        })
-        .catch(err => console.warn('Vic2 model preload failed:', err))
-    } else if (settings.pieceStyle === 'fiber') {
-      preloadFiberModels()
-        .then(() => {
-          if (sceneRef.current) rebuildPieces(sceneRef.current, pieceMapRef.current, 'fiber')
-          markDirty()
-        })
-        .catch(err => console.warn('Fiber model preload failed:', err))
-    } else if (settings.pieceStyle === 'fiber2') {
-      preloadFiber2Models()
-        .then(() => {
-          if (sceneRef.current) rebuildPieces(sceneRef.current, pieceMapRef.current, 'fiber2')
-          markDirty()
-        })
-        .catch(err => console.warn('Fiber2 model preload failed:', err))
-    } else if (settings.pieceStyle === 'neo_punk') {
-      preloadNeoPunkModels()
-        .then(() => {
-          if (sceneRef.current) rebuildPieces(sceneRef.current, pieceMapRef.current, 'neo_punk')
-          markDirty()
-        })
-        .catch(err => console.warn('Neo Punk model preload failed:', err))
-    } else {
-      rebuildPieces(sceneRef.current, pieceMapRef.current, settings.pieceStyle)
+    const style = settings.pieceStyle
+    if (!sceneReadyRef.current) return  // init() uses the latest style itself
+    preloadStyle(style).then(() => {
+      if (!sceneReadyRef.current || settingsRef.current.pieceStyle !== style) return
+      rebuildPieces(sceneRef.current, pieceMapRef.current, style)
       markDirty()
-    }
+    })
   }, [settings.pieceStyle])
 
   // ── Live board model update ──────────────────────────────────────────────
@@ -364,22 +308,42 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
     const fen = chess.fen()
 
     const run = async () => {
-      // getMove returns UCI format e.g. "e2e4" or "e7e8q"
+      const done = () => { botThinkingRef.current = false; setBotThinking(false) }
+
+      // Stockfish returns UCI ("e2e4" / "e7e8q") or null on failure / timeout
       const uciMove = await getMove(fen, difficulty).catch(() => null)
-        ?? getBotMove(fen, difficulty)  // fallback to local minimax if Stockfish fails
 
-      if (!uciMove) { botThinkingRef.current = false; setBotThinking(false); return }
+      // #6: parse UCI and SAN separately — the old length check treated SAN
+      // like "Nxe5" or "O-O-O" as UCI. chess.js v1 also *throws* on an
+      // illegal move instead of returning null, so guard every attempt.
+      const tryMove = (m) => {
+        try { return m ? chess.move(m) : null } catch { return null }
+      }
 
-      const moveObj = uciMove.length === 4 || uciMove.length === 5
-        ? { from: uciMove.slice(0, 2), to: uciMove.slice(2, 4), ...(uciMove[4] && { promotion: uciMove[4] }) }
-        : uciMove  // fallback minimax returns SAN
+      let moveResult = null
+      if (uciMove && /^[a-h][1-8][a-h][1-8][qrbn]?$/.test(uciMove)) {
+        moveResult = tryMove({
+          from: uciMove.slice(0, 2),
+          to: uciMove.slice(2, 4),
+          ...(uciMove[4] && { promotion: uciMove[4] })
+        })
+      }
+      if (!moveResult) {
+        // Fallback: local minimax (returns SAN)
+        moveResult = tryMove(getBotMove(fen, difficulty))
+      }
+      if (!moveResult) {
+        // Last resort so the game never freezes on the bot's turn
+        const legal = chess.moves()
+        moveResult = tryMove(legal[Math.floor(Math.random() * legal.length)])
+      }
+      if (!moveResult) { done(); return }
 
-      const moveResult = chess.move(moveObj)
-      if (!moveResult) { botThinkingRef.current = false; setBotThinking(false); return }
-
-      await applyMove(moveResult)
-      botThinkingRef.current = false
-      setBotThinking(false)
+      try {
+        await applyMove(moveResult)
+      } finally {
+        done()
+      }
     }
 
     setTimeout(run, 300)
@@ -394,7 +358,7 @@ export default function BotGameScreen({ difficulty = 'medium', playerInfo, setti
 
   // ── Canvas click / raycasting ─────────────────────────────────────────────
   const handleCanvasClick = useCallback((e) => {
-    if (!isMyTurn || isAnimating.current || gameOver) return
+    if (!isMyTurn || isAnimating.current || gameOver || !sceneReadyRef.current) return
     const canvas = canvasRef.current
     const camera = cameraRef.current
     const scene = sceneRef.current

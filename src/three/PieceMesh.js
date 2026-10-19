@@ -220,13 +220,18 @@ const loadOne = (type, url, cache) =>
   })
 
 // Preload lightweight sets at startup (glb + retro + fun)
+let baseLoadPromise = null
 export function preloadModels() {
+  // Cache the promise so repeated calls (every game screen mount) don't
+  // re-download the whole base set
+  if (baseLoadPromise) return baseLoadPromise
   preloadGlbTextures()
-  return Promise.all([
+  baseLoadPromise = Promise.all([
     ...Object.entries(GLB_MAP).map(([t, url]) => loadOne(t, url, MODEL_CACHE)),
     ...Object.entries(RETRO_GLB_MAP).map(([t, url]) => loadOne(t, url, RETRO_MODEL_CACHE)),
     ...Object.entries(FUN_GLB_MAP).map(([t, url]) => loadOne(t, url, FUN_MODEL_CACHE)),
   ])
+  return baseLoadPromise
 }
 
 // ─── Chinese Perfect set ─────────────────────────────────────────────────────
@@ -1554,6 +1559,32 @@ function createFiber2Piece(type, color, square, scene) {
  * @param {THREE.Scene} scene
  * @param {string} style 'classic'|'symbol'|'lowpoly'
  */
+/**
+ * Load the models a piece style needs (the GLB/retro/fun base set is always
+ * loaded too). Resolves once createPiece(…, style) can build the real models
+ * instead of falling back to classic pieces. Never rejects.
+ */
+export function preloadStyle(style) {
+  const extra = {
+    ok:         preloadHiModels,
+    hi:         preloadHiModels,
+    vic:        preloadVicModels,
+    vic2:       preloadVic2Models,
+    chinese:    preloadChineseModels,
+    chinese_p:  preloadChinesePModels,
+    japan:      preloadJapanModels,
+    fiber:      preloadFiberModels,
+    fiber2:     preloadFiber2Models,
+    neo_punk:   preloadNeoPunkModels,
+    steampunk1: preloadSteampunk1Models,
+  }[style]
+  const jobs = [preloadModels()]
+  if (extra) jobs.push(extra())
+  return Promise.all(jobs.map(p => Promise.resolve(p).catch(err => {
+    console.warn(`Model preload failed for style "${style}":`, err)
+  })))
+}
+
 export function createPiece(type, color, square, scene, style = 'classic') {
   switch (style) {
     case 'glb':     return createGLBPiece(type, color, square, scene)

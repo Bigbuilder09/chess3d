@@ -5,32 +5,46 @@ const SOCKET_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3001'
 
 let sharedSocket = null
 
+/**
+ * One socket for the whole app.
+ *
+ * #10: only create a new socket when none exists. A socket that is merely
+ * `disconnected` is still auto-reconnecting; replacing it would leave two live
+ * connections (double online count, duplicate queue joins).
+ */
+function getSocket() {
+  if (!sharedSocket) {
+    sharedSocket = io(SOCKET_URL, {
+      transports: ['websocket', 'polling'],
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000
+    })
+  }
+  return sharedSocket
+}
+
 export function useSocket() {
   const socketRef = useRef(null)
+  if (!socketRef.current) socketRef.current = getSocket()
 
   useEffect(() => {
-    if (!sharedSocket || sharedSocket.disconnected) {
-      sharedSocket = io(SOCKET_URL, {
-        transports: ['websocket', 'polling'],
-        reconnectionAttempts: Infinity,
-        reconnectionDelay: 1000,
-        reconnectionDelayMax: 5000
-      })
-    }
-    socketRef.current = sharedSocket
+    const sock = getSocket()
+    socketRef.current = sock
 
+    // #11: in socket.io v4 'reconnect' is emitted on the Manager (sock.io), not
+    // on the socket. 'connect' fires both on the first connection after a page
+    // refresh and after every automatic reconnection, so it covers both cases.
     const handleRejoin = () => {
       try {
         const { gameId, playerId } = JSON.parse(sessionStorage.getItem('game_data') || '{}')
-        if (gameId && playerId) sharedSocket.emit('rejoin_game', { gameId, playerId })
+        if (gameId && playerId) sock.emit('rejoin_game', { gameId, playerId })
       } catch {}
     }
-    sharedSocket.on('reconnect', handleRejoin)
-    sharedSocket.on('connect', handleRejoin)
+    sock.on('connect', handleRejoin)
 
     return () => {
-      sharedSocket.off('reconnect', handleRejoin)
-      sharedSocket.off('connect', handleRejoin)
+      sock.off('connect', handleRejoin)
     }
   }, [])
 
@@ -41,8 +55,9 @@ export function useSocket() {
   }, [])
 
   const on = useCallback((event, handler) => {
-    socketRef.current?.on(event, handler)
-    return () => socketRef.current?.off(event, handler)
+    const sock = socketRef.current
+    sock?.on(event, handler)
+    return () => sock?.off(event, handler)
   }, [])
 
   const off = useCallback((event, handler) => {
